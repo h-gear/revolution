@@ -92,11 +92,11 @@ Please cite if you use it. You can do this easily with one of these options:
 - The [citation file](./CITATION.cff).
 - If you prefer to copypaste, here you have the APA and BibTex strings:
 
-`Vroegh, T., & Tjong Kim Sang, E. h-gear [Computer software]. https://github.com/h-gear/hgear`
+`Vroegh, T., & Tjong Kim Sang, E. h-gear [Computer software]. https://github.com/h-gear/revolution`
 
 ---
 
-`@software{Vroegh_hgear,author = {Vroegh, Thijs and Tjong Kim Sang, Erik},license = {MIT},title = {{h-gear}},url = {https://github.com/h-gear/hgear}}`
+`@software{Vroegh_hgear,author = {Vroegh, Thijs and Tjong Kim Sang, Erik},license = {Apache},title = {{h-gear}},url = {https://github.com/h-gear/revolution}}`
 
 
 ## Getting Started
@@ -129,7 +129,7 @@ And repeat
 until finished
 ```
 
-## Liitle demo
+## Little demo
 
 End with an example of getting some data out of the system or using it for a little demo
 
@@ -156,11 +156,11 @@ Please submit pull requests to us in case you want to participate.
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
+
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the Apache License - see the [LICENSE.md](LICENSE.md) file for details
 
 ## Acknowledgments
 * Ramona Roller
