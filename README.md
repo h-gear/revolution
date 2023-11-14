@@ -67,12 +67,12 @@ RESEARCH QUESTIONS
 
 The project is organized according to a data science structure covering all the phases from data acquisition to deployment: 
 
-![](documentation/img/Data science lifecycle overview.jpg)
+<img src="documentation/img/Data science lifecycle overview.jpg" />
 
 The project integrates (dynamic) topic analysis, word2vec-based shico results, and temporal social network analysis, in addition
 to providing geographical insights into the spreading of ideas and the combination of different datasources.  
 
-![](documentation/img/hgear overview2.jpg)
+<img src="documentation/img/hgear overview2.jpg" />
  
 ## Authors
 
