@@ -1,5 +1,4 @@
 # Historiographing the Era of the American Revolution <img src="documentation/img/logo.jpg" width="120" align="right" />
-=====================================================
 
 ## Acronym: HGEAR
 
