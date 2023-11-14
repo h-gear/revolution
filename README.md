@@ -95,7 +95,7 @@ Please cite if you use it. You can do this easily with one of these options:
 
 ---
 
-`@software{Vroegh_hgear,author = {Vroegh, Thijs and Tjong Kim Sang, Erik},license = {Apache},title = {{h-gear}},url = {https://github.com/h-gear/revolution}}`
+`@software{Vroegh_hgear,author = {Vroegh, Thijs and Tjong Kim Sang, Erik},license = {Apache 2.0},title = {{h-gear}},url = {https://github.com/h-gear/revolution}}`
 
 
 ## Getting Started
@@ -159,7 +159,7 @@ Please submit pull requests to us in case you want to participate.
 
 ## License
 
-This project is licensed under the Apache License - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details
 
 ## Acknowledgments
 * Ramona Roller
