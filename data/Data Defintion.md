@@ -19,16 +19,18 @@ This project is based on four datasets:
 - EvansTCP: 5.012 books
 
 
-## Founders Online 
+## Founders Online Corpus
 
 internet adress:
 
-Founders Online Data Download: jay timm
+[Founders Online](https://founders.archives.gov/)
 
 Description:
-- 
-- 
-- 
+
+Founders Online is a [National Archives](https://www.archives.gov/) resource that makes available \~180K writings/letters of the Founders of the United States of America. 
+All documents have been extracted and are stored in a collection of R-based `rds` files. See also:
+-   [RDS Files](https://github.com/jaytimm/founders_archive_corpus/tree/master/data).
+
 
 ## Delegates of Congress
 
