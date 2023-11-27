@@ -2,7 +2,7 @@
 
 ## Acronym: HGEAR
 
-GOAL
+### GOAL
 The goal of the HGEAR project is to use digital methods to chart shifts in the character and
 structure of political discourse during the era of the American Revolution. By comparing shifts
 in language usage (via ShiCo: Shifting Concepts Through Time) with changing formations in 
@@ -15,10 +15,10 @@ here included scripts and analyses can be easily accomodated to include other le
 correspondence sources as well. Ultimately, this allows researchers to get a more complete picture
 of the fluxes in the political discourse during the American Revolution.
 
-KEYWORDS
+### KEYWORDS
 ShiCo, word vectors, natural language processing, text analysis, social network analysis
 
-RESEARCH QUESTIONS
+### RESEARCH QUESTIONS
 - How did the political discourse centered around the two concepts of liberal and republican ideologies develop during the Revolutionary era?
 - Who initiated/ drove the spread of these ideas on political ideology?
 - How did these ideas on political ideologies spread accross the network of interconnected people?
