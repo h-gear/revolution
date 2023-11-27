@@ -1,24 +1,24 @@
-# 0. goal ---- 
-# Scrape and save all letter data from the founding fathers website from the 
+# 0. goal ----
+# Scrape and save all letter data from the founding fathers website from the
 # website https://founders.archives.gov/. This slightly modified code is provided
 # by Jay Timm, which can be found here: https://github.com/jaytimm/founders-online-corpus
 
 # 1. libraries ----
 library(tidyverse)
 
-local <- 'C:/Projects/AmericanRevolution/Syntax/02_cleaning'
+local <- 'C:/Projects/AmericanRevolution/revolution/scripts/1_data_collection'
 url   <- 'founders-online-metadata.xml'
 
 setwd(local)
 
 # 2. scrape ----
-xml2 <- xml2::read_xml(url) %>% 
+xml2 <- xml2::read_xml(url) %>%
         xml2::xml_children()
 
 x1 <- lapply(1:length(xml2), function(i) {
   #nb <- for (i in 1: length(xml2)) {
   zz <- xml2[[i]] %>% xml2::as_list()
-  
+
   data.frame('title'      = paste0(zz$title, ''),
              'permalink'  = paste(zz$permalink),
              'project'    = paste(zz$project),
@@ -69,9 +69,10 @@ x3 <- x2 %>%
 x4        <- split(x3, x3$period)
 names(x4) <- gsub(' ',  '_', names(x4))
 
-setwd('C:/Projects/AmericanRevolution/Syntax/02 cleaning/datanew')
+
+setwd('C:/Projects/AmericanRevolution/revolution/data/raw/founders')
 
 # 3. Saving data ----
-# as 8 RDS files, one for each timeperiod
+# as 8 RDS files, one for each time period
 lapply(1:length(x4), function(x) {
   saveRDS(x4[[x]], file = paste0(names(x4[x]), '.rds'))  })

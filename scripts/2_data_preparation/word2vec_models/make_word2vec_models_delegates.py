@@ -26,23 +26,26 @@ import gensim
 print('Gensim version: ', gensim.__version__)
 
 def get_content(args):
-    df = pd.read_csv('../../raw/Letters.csv')
+    df = pd.read_csv('../../../data/raw/delegates/Letters.csv')
     #del df['EEBO'], df['VID'], df['STC'], df['Status'], df['Terms'], df['Pages'], df['Author']
-    df.rename(columns={'ID': 'TCP'}, inplace=True)
+    df.rename(columns={'ID': 'TCP'}, inplace = True)
     start_index = 0
     end_index = df.shape[0] - 1
     df['Content'] = ''
     for index in tqdm(linspace(start_index, end_index - 1, end_index - start_index)):
-        folder = f"../../raw/{df.loc[index, 'TCP'][3:5]}"
+        folder = f"../../../data/raw/delegates/letters/{df.loc[index, 'TCP'][3:5]}"
         file = f"{df.loc[index, 'TCP']}.txt"
         with open(f'{folder}/{file}', 'r') as f:
             content = f.read()
         df.loc[index, 'Content'] = content
     #years = list(set(df['Year']))[1:]
+    
     years = list(set(df['Year']))
     for year in years[start_index:end_index]:
         df_data = df[df['Year'] == year]
-        df_data.to_csv(f'../../processed/content/{year}.csv')
+        df_data.to_csv(f'../../../data/processed/delegates/content/{year}.csv')
+        
+        
          
 def split_into_sentences(text):
     text = text.replace('—', ' -- ')
@@ -93,9 +96,11 @@ def join_words(text):
         document.append(" ".join(sentence))
     return ". ".join(document)
 
+               
+
 def tokenize(args):
-    input_path = '../../processed/content'
-    output_path = '../../processed/tokenized'
+    input_path = '../../../data/processed/delegates/content'
+    output_path = '../../../data/processed/delegates/tokenized'
     input_files = sorted(os.listdir(input_path))
     for input_file in tqdm(input_files):
         print(f"Processing year {input_file[:-4]}")
@@ -137,7 +142,7 @@ def tokenize(args):
 
 def get_min_max_year():
     """Retrieves the first and last year in the data set."""
-    root_folder = os.path.abspath(f'../../processed/tokenized')
+    root_folder = os.path.abspath(f'../../../data/processed/delegates/tokenized')
     files = os.listdir(root_folder)
     years = [int(files[i].split('.')[0]) for i in range(len(files))]
     return np.array(years).min(), np.array(years).max()
@@ -151,7 +156,7 @@ def get_sentences_for_year(year):
     Each word is a string."""
     sentences = []
 
-    file_name = f"../../processed/tokenized/{year}.csv"
+    file_name = f"../../../data/processed/delegates/tokenized/{year}.csv"
     #csv.field_size_limit(sys.maxsize)
     if not os.path.isfile(file_name):
         print(f"Year {year} does not exist")
@@ -181,11 +186,13 @@ def get_sentences_in_range(start_y, end_y):
 
 
 def train(args):
-    model_folder = '../../models'
+    model_folder = '../../../Shico_delegates/models2'
     years_in_model = 3
     #years_in_model = int(args.window) if args.window else 5
     step_years = 1
+    
     y_0, y_n = get_min_max_year()
+    
     for year in tqdm(range(y_0, y_n - years_in_model + 1, step_years)):
         start_y = year
         end_y = year + years_in_model
@@ -202,11 +209,16 @@ def train(args):
 
         processed_corpus = [[word.lower() for word in sentence if frequency[word] > 1] for sentence in sentences]
         dictionary = corpora.Dictionary(processed_corpus)
+        
+        print('...saving')               
         dictionary.save('letters.dict')
         bow_corpus = [dictionary.doc2bow(text) for text in processed_corpus]
 
-        model = gensim.models.Word2Vec(min_count=5, workers=4)
+        model = gensim.models.Word2Vec(min_count = 5, workers = 11)
         model.build_vocab(processed_corpus)
+        
+        print('...training')
+        
         try:
             model.train(processed_corpus, total_examples=model.corpus_count, epochs=model.epochs)
         except RuntimeError as e:
