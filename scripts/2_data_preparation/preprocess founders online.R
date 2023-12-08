@@ -1,61 +1,181 @@
 # 0. GOAL ----
-# Preprocessing the raw data from the Founders Online Archive and save it. 
-# the raw data was saved in the folder 'datanew' and is the result of running
-# the script 'scrape founders online.R'. This script integrates and builds further
-# upon the previous data exploration on the founders online by Thomas Hoekstra
-# (github link:)
+# Preprocessing the raw data from the Founders Online Archive [Founders Online]
+# (https://www.founders.archives.gov/) and save it. This preprocessing will
+# consist of removing irrelevant documents, removing non-letters, and merging
+# split nodes (name disambiguation).
 
-# 1. LOAD IN LIBRARIES ----
+# The raw data was saved in the folder data/raw/founders and is the result of
+# running the script 'scrape founders online.R'. This script integrates the
+# previous data exploration on the founders online by Thomas Hoekstra (github
+# link:) https://github.com/Rohrym/letters_of_the_revolution_project
+
+# 1. LOAD LIBRARIES ----
 library(tidyverse)
 library(data.table)
 library(polyglotr) # for translation of texts
+library(furrr)      # for parallel processing
 
-local <- 'C:/Projects/AmericanRevolution/Syntax/02_cleaning/datanew'
-setwd(local)
+# 2. LOAD DATA ----
+gfiles <- list.files(path      = "data/raw/founders",
+                     pattern   = "rds",
+                     recursive = TRUE)
 
-# 2. LOAD IN DATA ----
-gfiles <- list.files(path = local, 
-                     pattern = "rds", 
-                     recursive = TRUE) 
-
-ffc <- lapply(gfiles, readRDS) %>% rbindlist()
-
-# OR
-
-# f1 <- read_rds("datanew/Adams_Presidency.rds")
-# f2 <- read_rds("datanew/Colonial.rds")
-# f3 <- read_rds("datanew/Confederation_Period.rds")
-# f4 <- read_rds("datanew/Jefferson_Presidency.rds")
-# f5 <- read_rds("datanew/Madison_Presidency.rds")
-# f6 <- read_rds("datanew/post-Madison_Presidency.rds")
-# f7 <- read_rds("datanew/Revolutionary_War.rds")
-# f8 <- read_rds("datanew/Washington_Presidency.rds")
-# 
-# ffc <- rbind(f1,f2,f3,f4,f5,f6,f7,f8)
-
-dim(ffc) #183715 obs
+path <- "data/raw/founders/"
+ffc <- lapply(paste0(path, gfiles), readRDS) %>% rbindlist() #183715 observations
 setDT(ffc)
+
+# 3. PREPROCESSING DATA ----
+
+# Here we will start manipulating the data to make it fit our needs.
+# First of all, all duplicate texts and non-correspondence will be removed. This
+# because the project is exclusively interested in correspondence, and it can
+# happen that unique letters appear more then once in the Founders dataset due
+# to the way it is structured. These operations will be conducted by dropping
+# any data entries without recipient (as you would need at least one recipient
+# to call something correspondence), and to drop any exact duplicates.
+
+# In the rest of this section I will be dealing with name disambiguation *i.e.*
+# name attribution to specific people. Due to spelling mistakes and other
+# problems with the encoding of the metadata for the Founders Dataset did the
+# names of certain individuals split up into multiple names. By replacing
+# (parts of) names I am making the naming of these individuals consistent again
+# across the database.
+
+# The results of this section will be saved into a new csv file which will be
+# used for further the data exploration.
 
 # count the amount of words in each letter
 ffc[, doc_length := lengths(gregexpr("\\W+", text))]
 
+# dropping any content without recipients and removing duplicate texts.
+# Drop rows with missing values in the 'recipients' column
+ffc <- ffc[!is.na(ffc$recipients), ]
 
-# 3. SAVE COMBINED DATA AS CSV ----
-# use this dataset in Hoekstra's code to apply its preprocessing steps
-write.csv(ffc, "founders_online_archive_raw.csv", row.names = FALSE)
+# Drop duplicates based on the 'text' column
+ffc <- ffc[!duplicated(ffc$text), ]
 
-# 4. PREPROCESS DATA ----
+# Replace multiple patterns in 'authors' and 'recipients' columns
+ffc[, c("authors", "recipients")] <- lapply(ffc[, c("authors", "recipients")], function(x) {
+        gsub(', & Fins', ' & Fins', x, fixed = TRUE) %>%
+        gsub(', & Cie.', ' & Cie.', ., fixed = TRUE) %>%
+        gsub(', & ', ' | ', .        , fixed = TRUE) %>%
+        gsub(', Jr.', ' Jr.', .      , fixed = TRUE) %>%
+        gsub(', Sr.', ' Sr.', .      , fixed = TRUE) %>%
+        gsub(' \\(business\\)', '', ., fixed = TRUE)
+})
 
-## A) INCLUDE HOEKSTRA CODE ----
-#TODO: use reticulate and incorporate python code here
+# Correcting inconsistently encoded names in 'authors' and 'recipients' columns
+ffc[, c("authors", "recipients")] <- lapply(ffc[, c("authors", "recipients")], function(x) {
 
+        gsub('Adams, Abigail Smith', 'Adams, Abigail', x, fixed = TRUE) %>%
+        gsub('Hamilton, Alexander \\(Lieutenant Colonel\\)', 'Hamilton, Alexander', ., fixed = TRUE) %>%
+        gsub('Steuben, Major General', 'Steuben, Friedrich Wilhelm Ludolf Gerhard Augustin, Baron [von]', ., fixed = TRUE) %>%
+        gsub('Steuben, Friedrich Wilhelm Ludolf Gerhard Augustin, Baron von', 'Steuben, Friedrich Wilhelm Ludolf Gerhard Augustin, Baron [von]', ., fixed = TRUE) %>%
+        gsub('Steuben, Friedrich Wilhelm Ludolf Gerhard Augustin, baron von', 'Steuben, Friedrich Wilhelm Ludolf Gerhard Augustin, Baron [von]', ., fixed = TRUE) %>%
+        gsub('Steuben, Baron von', 'Steuben, Friedrich Wilhelm Ludolf Gerhard Augustin, Baron [von]', ., fixed = TRUE) %>%
+        gsub('Vergennes, Charles Gravier, comte de', 'Vergennes, Charles Gravier, Comte de', ., fixed = TRUE) %>%
+        gsub('Dumas, Charles-Guillaume-Frédéric', 'Dumas, Charles William Frederic', ., fixed = TRUE) %>%
+        gsub('Dumas, C. W. F.', 'Dumas, Charles William Frederic', ., fixed = TRUE) %>%
+        gsub('Boudinot, Elias Jr.', 'Boudinot, Elias', ., fixed = TRUE) %>%
+        gsub('Bowdinot, Elias', 'Boudinot, Elias', ., fixed = TRUE) %>%
+        gsub('Schuyler, Philip John', 'Schuyler, Philip', ., fixed = TRUE) %>%
+        gsub('Lee, Henry Jr.', 'Lee, Henry', ., fixed = TRUE) %>%
+        gsub('Nelson, Thomas Jr.', 'Nelson, Thomas', ., fixed = TRUE) %>%
+        gsub('Muhlenberg, John Peter Gabriel', 'Muhlenberg, Peter', ., fixed = TRUE) %>%
+        gsub('Harrison, Benjamin Sr.', 'Harrison, Benjamin', ., fixed = TRUE) %>%
+        gsub('Williams, Jonathan Jr.', 'Williams, Jonathan', ., fixed = TRUE) %>%
+        gsub('Wharton, Thomas Jr.', 'Wharton, Thomas', ., fixed = TRUE) %>%
+        gsub('Virginia Delegates in Congress', 'Virginia Delegates', ., fixed = TRUE) %>%
+        gsub('Virginia Delegates, American Continental Congress', 'Virginia Delegates', ., fixed = TRUE) %>%
+        gsub('Thaxter, John Jr.', 'Thaxter, John', ., fixed = TRUE) %>%
+        gsub('Schweighauser, John Daniel', 'Schweighauser, Jean-Daniel', ., fixed = TRUE) %>%
+        gsub('Rendon, Francisco', 'Rendón, Francisco', ., fixed = TRUE) %>%
+        gsub('Neufville, Jean de', 'Neufville, Jean [de]', ., fixed = TRUE) %>%
+        gsub('Neufville, Leendert de', 'Neufville, Leonard [de]', ., fixed = TRUE) %>%
+        gsub('McDougall, Maj. Gen. Alexander', 'McDougall, Alexander', ., fixed = TRUE) %>%
+        gsub('Malcom, Colonel William', 'Malcom, William', ., fixed = TRUE) %>%
+        gsub('Létombe, Philippe-André-Joseph de', 'Létombe, Philippe André Joseph de', ., fixed = TRUE) %>%
+        gsub('Johnson, Thomas Jr.', 'Johnson, Thomas', ., fixed = TRUE) %>%
+        gsub('Hamilton, Alexander (Lieutenant Colonel)', 'Hamilton, Alexander', ., fixed = TRUE) %>%
+        gsub('Greene, Nathaniel', 'Greene, Nathanael', ., fixed = TRUE) %>%
+        gsub('Gérard, Conrad-Alexandre', 'Gérard, Conrad Alexandre', ., fixed = TRUE) %>%
+        gsub('Genet, Edme-Jacques', 'Genet, Edmé Jacques', ., fixed = TRUE) %>%
+        gsub('Dana, Francis M.', 'Dana, Francis', ., fixed = TRUE) %>%
+        gsub('Cooke, Nicholas Sr.', 'Cooke, Nicholas', ., fixed = TRUE) %>%
+        gsub('Chaumont, Jacques Donatien, Leray de', 'Chaumont, Jacques-Donatien Le Ray de', ., fixed = TRUE) %>%
+        gsub('Church, William Singleton', 'Digges, Thomas', ., fixed = TRUE) %>%
+        gsub('Fitzpatrick, William', 'Digges, Thomas', ., fixed = TRUE) %>%
+        gsub('Dundas, T.', 'Digges, Thomas', ., fixed = TRUE) %>%
+        gsub('Ross, Timothy D.', 'Digges, Thomas', ., fixed = TRUE) %>%
+        gsub('Beaumarchais, Pierre-Augustin Caron de', 'Beaumarchais, Pierre Augustin Caron de', ., fixed = TRUE) %>%
+        gsub('Rochambeau, Comte de', 'Rochambeau, Jean-Baptiste Donatien de Vimeur, comte de', ., fixed = TRUE) %>%
+        gsub('Rochambeau, Jean-Baptiste-Donatien de Vimeur, comte de, Jean-Baptiste Donatien de Vimeur, comte de', 'Rochambeau, Jean-Baptiste Donatien de Vimeur, comte de', ., fixed = TRUE) %>%
+        gsub('Barbé de Marbois, François', 'Barbé-Marbois (Barbé de Marbois), François', ., fixed = TRUE) %>%
+        gsub('Barbé-Marbois, François de', 'Barbé-Marbois (Barbé de Marbois), François', ., fixed = TRUE) %>%
+        gsub('Barbé-Marbois, François', 'Barbé-Marbois (Barbé de Marbois), François', ., fixed = TRUE) %>%
+        gsub('Barbé-Marbois, Marquis de', 'Barbé-Marbois (Barbé de Marbois), François', ., fixed = TRUE) %>%
+        gsub('Barbé-Marbois, Pierre-François', 'Barbé-Marbois (Barbé de Marbois), François', ., fixed = TRUE) %>%
+        gsub('Marbois, François Barbé de', 'Barbé-Marbois (Barbé de Marbois), François', ., fixed = TRUE) %>%
+        gsub('Marbois, François Marquis de Barbé-Marbois', 'Barbé-Marbois (Barbé de Marbois), François', ., fixed = TRUE) %>%
+        gsub('La Vauguyon, Paul-François de Quélen de Stuer de Caussade, duc de', 'La Vauguyon, Paul François de Quélen de Stuer de Causade, Duc de', ., fixed = TRUE) %>%
+        gsub('Dubuysson des Aix, Charles-François, chevalier', 'Du Buysson des Aix, Charles-François, vicomte', ., fixed = TRUE) %>%
+        gsub('Destouches, —— (f. 1779–80)', 'Charles-René-Dominique Sochet', ., fixed = TRUE) %>%
+        gsub('Destouches, —— (f. 1780–1782)', 'Destouches, Charles-René-Dominique Sochet', ., fixed = TRUE) %>%
+        gsub('Destouches, ——', 'Destouches, Charles-René-Dominique Sochet', ., fixed = TRUE) %>%
+        gsub('Destouches, Chevalier', 'Destouches, Charles-René-Dominique Sochet', ., fixed = TRUE) %>%
+        gsub('Destouches, Charles-René-Dominique Sochet \\(f. 1779–80\\)', 'Destouches, Charles-René-Dominique Sochet', ., fixed = TRUE) %>%
+        gsub('Destouches, Charles-René-Dominique Sochet \\(f. 1780–1782\\)', 'Destouches, Charles-René-Dominique Sochet', ., fixed = TRUE) %>%
+        gsub('Chaumont, Jacques-Donatien Le Ray de', 'Chaumont, Jacques Donatien, Leray de', ., fixed = TRUE) %>%
+        gsub('Sartine, Antoine-Raymond-Gualbert-Gabriel de', 'Sartine, Antoine Raymond Jean Gualbert Gabriel de', ., fixed = TRUE) %>%
+        gsub('Armand, Charles', 'Armand (Armand-Charles Tuffin, marquis de La Rouërie)', ., fixed = TRUE) %>%
+        gsub('Armand Tuffin, Charles, marquis de La Rouërie', 'Armand (Armand-Charles Tuffin, marquis de La Rouërie)', ., fixed = TRUE) %>%
+        gsub('Estaing, Charles-Hector Theodat, comte d’', 'Estaing, Charles-Hector Théodat, comte d’', ., fixed = TRUE) %>%
+        gsub('Estaing, Charles-Hector, comte d’', 'Estaing, Charles-Hector Théodat, comte d’', ., fixed = TRUE) %>%
+        gsub('Estaing, Charles-Henri, comte d’', 'Estaing, Charles-Hector Théodat, comte d’', ., fixed = TRUE) %>%
+        gsub('Caracciolo, Domenico, Marchese di Villamaina', 'Caracciolo, Domenico, Marchesse di Villa Marina', ., fixed = TRUE) %>%
+        gsub('Arendt, Henry Leonard Philip, baron d’', 'Arendt, Henry Leonard Philip', ., fixed = TRUE) %>%
+        gsub('Trumbull, Jonathan Sr.', 'Trumbull, Jonathan', ., fixed = TRUE) %>%
+        gsub('Berubé de Costentin, ——', 'Costentin, Berubé de', ., fixed = TRUE) %>%
+        gsub('Rocquette, Jacques, Elsevier, T. A.', 'Rocqùette, J.,Th. A. Elsevier, & P. Th. Rocqùette,', ., fixed = TRUE) %>%
+        gsub('Dubbeldemuts, Adrianus', 'Dubbeldemuts, F. & A.', ., fixed = TRUE) %>%
+        gsub('Dubbeldemuts, Franco', 'Dubbeldemuts, F. & A.', ., fixed = TRUE) %>%
+        gsub('Parsons, Samuel Holden', 'Parsons, Samuel H.', ., fixed = TRUE) %>%
+        gsub('Stirling, Lord \\(née William Alexander\\)', 'Stirling, Lord (né William Alexander)', ., fixed = TRUE) %>%
+        gsub('Alexander, William Lord Stirling', 'Stirling, Lord (né William Alexander)', ., fixed = TRUE) %>%
+        gsub('Stirling, Major General', 'Stirling, Lord (né William Alexander)', ., fixed = TRUE) %>%
+        gsub('Alexander, William', 'Stirling, Lord (né William Alexander)', ., fixed = TRUE) %>%
+        gsub('La Lande & Fynje, de', 'La Lande & Fynje', ., fixed = TRUE) %>%
+        gsub('Horneca, Fizeaux & Cie.', 'Horneca, Fizeaux & Co.', ., fixed = TRUE) %>%
+        gsub('Staphorst, Nicholas & Jacob van', 'Staphorst, Nicolaas & Jacob van', ., fixed = TRUE) %>%
+        gsub('Ambler, Jaquelin \\(Jacquelin\\)', 'Ambler, Jacquelin', ., fixed = TRUE) %>%
+        gsub('La Luzerne, Anne César, Chevalier de', 'La Luzerne, Anne-César, chevalier de', ., fixed = TRUE)
+})
 
-## B) ADD METADATA ----
+# some filtering will be done to remove unknown, anonymous and otherwise
+# non-existent authors. Additionally entries with certain other authors or
+# recipients will be removed due to various reasons.
 
-# retrieve the data after having run Thomas Hoekstra's preprocessing script
-ffc <- read.csv("/Hoekstra/founders_online_data_exploration_data.csv")
-setDT(ffc)
+# Defining function to remove non-existent and unwanted authors and recipients
+remove_author_recipient <- function(df, names) {
+    for (name in names) {
+        df <- df[!(df$authors == name | df$recipients == name), ]
+    }
+    df <- df[!is.na(df$authors), ]
+    return(df)
+}
 
+# List of names to be removed
+names_to_remove <- c('Unknown', 'UNKNOWN', 'Anonymous', 'First Joint Commission at Paris',
+                     'American Commissioners', 'Son', 'Son ()', 'Sons ()',
+                     'Cie.', ' Cie.', 'fils','et al.', 'Zoon ()',
+                     'American Peace Commissioners', 'William Bradford',
+                     'Smith, William', 'Smith, John', 'Thornton, John',
+                     'Rocquette, Pieter Th.')
+
+# Applying the function to the data frame
+ffc <- remove_author_recipient(ffc, names_to_remove)
+
+# ADD METADATA TO LETTERS
 ffc$Month_Yr <- sub('-[0-9]*$', '', ffc$date_from)
 ffc$Month_Yr <- as.Date(paste0(ffc$Month_Yr, '-01'), format = '%Y-%m-%d')
 
@@ -65,15 +185,16 @@ display_letter <- function(x) {
     a2 <- trimws(a1)
     a3 <- subset(a2, a2 != '')
     a4 <- paste(a3, collapse = '\n')
-    a4a <- paste0('Author: ', x$author, '\n>', 
-                 'Recipient: ', x$recipient, '\n>', 
-                 'Date: ', x$date_to, '\n>', 
-                 'Period: ', x$period, '\n>\n', 
+    a4a <- paste0('Author: ', x$author, '\n>',
+                 'Recipient: ', x$recipient, '\n>',
+                 'Date: ', x$date_to, '\n>',
+                 'Period: ', x$period, '\n>\n',
                  a4)
     a5 <- gsub(' *\n', '  \n', a4a)
     paste('>', gsub(' *(\n*) *$', '\\1', a5))
 }
 
+# example of displaying letter
 display_letter(ffc[150681,])
 
 # filter out correspondence to oneself, if any
@@ -84,17 +205,18 @@ ffc2 <- ffc2 %>% filter(text != "")
 
 # remove 'empty nodes'
 # This data includes only letters with known authors and recipients, and does not
-# include data with no author or no recipient, such as receipts or account books 
+# include data with no author or no recipient, such as receipts or account books
 empty <- c("","——","Unknown","UNKNOWN")
 
 ffc2 <- subset(ffc2, !(authors %in% empty | recipients %in% empty))
 
-## C) CREATE SOURCE-TARGET PAIRS ----
+## A) CREATE SOURCE-TARGET PAIRS ----
 # In the case of multiple authors or multiple recipients, these were split into
-# multiple records with only one author and one recipient each. For example, 
-# the letter "Sarah Read to Benjamin and Deborah Franklin, 10 April 1734," 
-# was split into two records: one with ‘author: Sarah Read’ and ‘recipient: 
-# Benjamin Franklin,’ and the other with author: ‘Sarah Read, recipient: Deborah Franklin.’ 
+# multiple records with only one author and one recipient each. For example,
+# the letter "Sarah Read to Benjamin and Deborah Franklin, 10 April 1734,"
+# was split into two records: one with ‘author: Sarah Read’ and ‘recipient:
+# Benjamin Franklin,’ and the other with author: ‘Sarah Read, recipient:
+# Deborah Franklin.’
 
 ffc2$authors2    <- gsub("([&.,|])|[[:punct:]]", "\\1", ffc2$authors)
 ffc2$recipients2 <- gsub("([&.,|])|[[:punct:]]", "\\1", ffc2$recipients)
@@ -104,16 +226,16 @@ ffc2$authors2    <- gsub("\\|", ";", ffc2$authors2)
 ffc2$recipients2 <- gsub("\\|", ";", ffc2$recipients2)
 
 # in case of multiple authors, these are split so that each author has its own row
-ffc3 <- ffc2 %>% 
-    mutate(authors2 = strsplit(as.character(authors2), ";")) %>% 
-    unnest(authors2) %>% 
+ffc3 <- ffc2 %>%
+    mutate(authors2 = strsplit(as.character(authors2), ";")) %>%
+    unnest(authors2) %>%
     mutate(authors2 = trimws(authors2))
 
-# Next, building further on the separated authors and in case of multiple recipients, 
-# these are split as well so that each recipient has its own row
-ffc4 <- ffc3 %>% 
-    mutate(recipients2 = strsplit(as.character(recipients2), ";")) %>% 
-    unnest(recipients2) %>% 
+# Next, building further on the separated authors and in case of multiple
+# recipients,these are split as well so that each recipient has its own row
+ffc4 <- ffc3 %>%
+    mutate(recipients2 = strsplit(as.character(recipients2), ";")) %>%
+    unnest(recipients2) %>%
     mutate(recipients2 = trimws(recipients2))
 
 ffc4 <- ffc4 %>% filter(authors2 != recipients2)
@@ -121,22 +243,25 @@ ffc4 <- ffc4 %>% mutate(year = as.integer(year(date_from)),
                         end.year  =  as.integer(year(date_to)))
 glimpse(ffc4)
 
-## D) REMOVE DUPLICATE LETTERS ----
+## B) REMOVE DUPLICATE LETTERS ----
 ffc5 <- ffc4 %>%
-    group_by(authors2,recipients2, date_from,date_to,year,end.year) %>%
+    group_by(authors2, recipients2, date_from, date_to, year, end.year) %>%
         mutate(amount = row_number()) %>%
-        # amount != 1 suggests multiple letters on the same day by author A to recipient B
-        # if this is indeed the case (e.g. amount = 2), then do a similarity check with the text
-        # string one before (lag(content)) within the same group_by 
-        mutate(diff = ifelse(amount != 1, RecordLinkage::levenshteinSim(text,lag(text)),0)) %>% 
-    ungroup() %>% 
-    filter(diff < 0.90) 
 
-## E) TRANSLATE ALL NON-ENGLISH TEXTS ----
+        # amount != 1 suggests multiple letters on the same day by author A to
+        # recipient B if this is indeed the case (e.g. amount = 2), then do a
+        # similarity check with the text string one before (lag(content)) within
+        # the same group_by
+        mutate(diff = ifelse(amount != 1, RecordLinkage::levenshteinSim(text,lag(text)),0)) %>%
+    ungroup() %>%
+    filter(diff < 0.90)
 
-# Function to detect language
-detect_language <- function(row) {
-    text <- row[["text"]]
+saveRDS(ffc5, file = "data/interim/ffc_no_duplicates.rds")
+
+## C) TRANSLATE ALL NON-ENGLISH TEXTS ----
+
+# Function to detect the language of the letter
+detect_language <- function(text) {
     tryCatch({
         language <- language_detect(text)
         return(language)
@@ -146,101 +271,182 @@ detect_language <- function(row) {
     })
 }
 
-# Apply the function to each row and create a new 'language' column
-# Note; this takes quite some time!!
-ffc5$language <- apply(ffc5, 1, detect_language)
-table(ffc5$language)
-
-# Function to translate text to English
+# Function to translate text to English. It takes a text string and its
+# corresponding source language as derived in the previous step as input
 translate_to_english <- function(text, source_lang) {
-    if (!is.na(text) && nchar(text) > 0) {
-        
-        # If the source language is not English, it uses the google_translate 
-        # function to translate the text to English 
-        if (source_lang %in% c("it")) {
-            translated <- google_translate(text, target_language = "en", source_language = source_lang)
-            return(ifelse(nchar(translated) > 0, translated, "Translation Failed"))
-        } else {
-            return(text)
+
+    # If the source language is not English, it uses the google_translate
+    # function to translate the text to English
+    if (source_lang != "en" && source_lang != "No Text" && source_lang != "Unknown" && doc_length < 500) {
+        translated <- google_translate(text,
+                                       target_language = "en",
+                                       source_language = source_lang)
+
+        # Print for troubleshooting
+        if (length(translated) == 0) {
+            cat("Translation failed for:", text, "\n")
         }
+
+        # If the translation is successful, it returns the translated text
+        return(ifelse(nchar(translated) > 0, translated, "Translation Failed"))
+
     } else {
-        return("No Text")
-    }
+      #otherwise .... (no need for translation)
+      return("see original text column")
+      }
 }
 
-translate_to_english <- function(text, source_lang) {
-    # It takes a text string and its corresponding source language as inputs 
-    
-    # If the source language is not English, it uses the google_translate 
-    # function to translate the text to English 
-    if (source_lang != "en" && source_lang != "No Text" && source_lang != "Unknown") {
-        translated <- google_translate(text, target_language = "en", source_language = source_lang)
-        return(translated)
-        
-        #otherwise, it returns the original text 
-    } else {
-        return(text)
-    }
-}
+# setup 11 threads
+plan(multisession, workers = 11)
 
-# Add a translated column. The map2_chr function takes the text_column and 
-# language column as inputs for each row and uses the translate_to_english function
-# to translate the text while considering the source language from the language column 
-test <- ffc5 %>% 
-    mutate(translated_text = map2_chr(text, language, ~ translate_to_english(.x, .y)))
+start <- Sys.time()
 
-## F) CREATE UNIX-TIME VARIABLE ----
-ffc6 <- ffc5 %>% 
-    arrange(date_from) %>% 
+# detect the language of each letter
+ffc5 <- ffc5 %>%
+    mutate(language = furrr::future_map(text, detect_language)) %>%
+    as.data.frame()
+
+# overview of all languages
+unique(ffc5$language)
+
+saveRDS(ffc5, file = "data/interim/ffc_language_information.rds")
+ffc5 <- readRDS(file = "data/interim/ffc_language_information.rds")
+
+## Preparing the text for translation ----
+# Ensures that the text is in the UTF-8 format
+ffc5$text_encoded <- iconv(ffc5$text, to = "UTF-8", sub = " ")
+
+# Some translation APIs or services might require spaces to be replaced with "%20" in URLs
+ffc5$text_encoded <- gsub(" ", "%20", ffc5$text_encoded)
+
+# Ensuring that characters are represented in a URL-friendly format
+ffc5$text_encoded <- URLencode(ffc5$text_encoded)
+
+# Null characters might cause issues during translation
+ffc5$text_encoded <- gsub("\\x00", "", ffc5$text_encoded)
+
+# Add a translated text column: setup 11 threads
+plan(multisession, workers = 11)
+
+# Set seed globally
+future::plan(seed = TRUE)
+
+start <- Sys.time()
+
+translated_texts <- ffc5 %>%
+  filter(language != "en" & doc_length < 500) %>%
+  mutate(translation = future_map_chr(text,
+                       ~ google_translate(.x,
+                       target_language = "en",
+                       source_language = "auto"),
+                       .options = furrr_options(seed = 1))) %>%
+  select(authors2,recipients2,text,text_encoded, translation)
+
+# Translate the letters using parallel processing
+translated_texts_1 <- ffc5 %>% slice(1:50000) %>%
+  filter(language != "en" & doc_length < 500) %>%
+  mutate(translation = future_map_chr(text,
+                        ~ google_translate(.x,
+                          target_language = "en",
+                          source_language = "auto"))) %>%
+  select(authors2,recipients2,text,translation)
+
+translated_texts_2 <- ffc5 %>% slice(50001:100000) %>%
+  filter(language != "en" & doc_length < 500) %>%
+  mutate(translation = future_map_chr(text,
+                        ~ google_translate(.x,
+                        target_language = "en",
+                        source_language = "auto"))) %>%
+  select(authors2,recipients2,text,translation)
+
+# Assuming your dataframe is named 'df' and the column containing text is 'text_column'
+#ffc5$text <- lapply(ffc5$text, function(x) scan(file = textConnection(x), what = character(), fileEncoding = "UTF-8", sep = "\n", allowEscapes = TRUE))
+
+
+translated_texts_3 <- ffc5 %>% slice(100001:nrow(ffc5)) %>%
+  filter(language != "en" & doc_length < 500) %>%
+  #mutate(text = URLencode(text)) %>%
+  mutate(translation = future_map_chr(text,
+                        ~ google_translate(.x,
+                        target_language = "en",
+                        source_language = "auto"))) %>%
+  select(authors2,recipients2,text,translation)
+
+translated_texts <- rbind(translated_texts_1,translated_texts_2,translated_texts_3)
+
+saveRDS(translated_texts, file = "data/interim/translated_texts_500.rds")
+translated_texts <- readRDS(file = "data/interim/translated_texts_500.rds")
+
+
+# Join the translated texts to the original data frame
+ffc5 <- ffc5 %>%
+  left_join(translated_texts, by = c("authors2","recipients2","text")) %>%
+    mutate(translation = ifelse(is.na(translation), text, translation))
+
+end <- Sys.time()
+end - start # Time difference of ......
+
+saveRDS(ffc5_translated, file = "data/interim/ffc_translated_letters.rds")
+
+display_letter(translated_texts[1,])
+
+## D) CREATE UNIX-TIME VARIABLE ----
+
+# Since several analyses uses unix timestamps which can only work with dates
+# after 1st January 1970, we convert the sending dates of letters into time
+# differences compared to the very first available date
+
+ffc6 <- ffc5 %>%
+    arrange(date_from) %>%
     # create id
-    mutate(id = rownames(ffc5)) %>% 
-    select(-authors,-recipients) %>% 
-    rename(authors = authors2,recipients = recipients2) %>% 
-    select(id,title,date_from,date_to,Month_Yr,year,end.year,period,authors,recipients,text,doc_length) %>% 
-    arrange(date_from) %>% 
-
-    # Since several later analyses uses unix timestamps which can only work with dates
-    # after 1st January 1970, we convert the sending dates of letters into time differences
-    # compared to the very first date of the revolution
-
+    mutate(id = rownames(ffc5)) %>%
+    select(-authors,-recipients) %>%
+    rename(authors = authors2,recipients = recipients2) %>%
+    select(id,title,date_from,date_to,Month_Yr,year,end.year,period,authors,recipients,text,doc_length) %>%
+    arrange(date_from) %>%
     mutate(date_from_dt = date(date_from),
            timestart   = min(date_from_dt), # first date in dataset
-           # number of days from earliest sending date in revolution to the 
-           # current sending date. Store time differences in separate column 
-           # called 'time'. Note that pathpy later requires a column called 'time'
-           time = as.numeric(date_from_dt - timestart)) %>% 
-    arrange(time) %>% 
-    select(-date_from_dt,-timestart,-date_to) %>% 
+
+           # number of days from earliest sending date to the current sending
+           # date. Store time differences in nw column 'time'
+           time = as.numeric(date_from_dt - timestart)) %>%
+    arrange(time) %>%
+    select(-date_from_dt,-timestart,-date_to) %>%
     rename(sending_date = date_from)
 
+# check amount of letters and variables in the dataframe
 dim(ffc6) # 164062 letters
 glimpse(ffc6)
 
-## G) CREATE IDS ----
+## E) CREATE IDS ----
 # create a table of all people to map to numeric ids
 correspondents <- unique(c(ffc6$recipients,ffc6$authors))
 
 # unique nodes/vertices
-length(correspondents) 
+length(correspondents)
 head(correspondents, 10)
 
 # ids for authors and recipients
 ffc6$sender_id   <- match(ffc6$authors   , correspondents)
 ffc6$receiver_id <- match(ffc6$recipients, correspondents)
 
-# 5) SAVE PREPROCESSED DATA ----
-write.csv(ffc6, "../../Data/FoundingFathers/ffc_total.csv", row.names = FALSE)
+# 4) SAVE PREPROCESSED DATA ----
+# as csv
+write.csv(ffc6, "data/processed/founders/ffc_preprocessed.csv", row.names = FALSE)
+
+# as rds
+saveRDS(ffc6, file = "data/processed/founders/ffc_preprocessed.rds")
 
 ## A) SAVE DICTIONARY IDS AND NAMES ----
 
 # create a table of all people to map to numeric ids
-pp_nodes_sender   <- ffc6 %>% filter(!is.na(sender_id)) %>% select(sender_id, authors) %>% 
+pp_nodes_sender   <- ffc6 %>% filter(!is.na(sender_id)) %>% select(sender_id, authors) %>%
     rename(person_id = sender_id, last_name = authors)
 
-pp_nodes_receiver <- ffc6 %>% filter(!is.na(receiver_id)) %>% select(receiver_id, recipients) %>% 
+pp_nodes_receiver <- ffc6 %>% filter(!is.na(receiver_id)) %>% select(receiver_id, recipients) %>%
     rename(person_id = receiver_id, last_name = recipients)
 
 nodes <- rbind(pp_nodes_sender,pp_nodes_receiver) %>% distinct(person_id, last_name)
 
-# this dataset is used in the pathpy analysis
-write.csv(nodes, "nodes_ff.csv", row.names = FALSE)
+# this dataset is used later in the pathpy analysis
+write.csv(nodes, "data/processed/founders/nodes_ff.csv", row.names = FALSE)
