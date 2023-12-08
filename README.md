@@ -158,16 +158,22 @@ Please submit pull requests to us in case you want to participate.
 
 
 ## License
-
 This project is licensed under the Apache License 2.0 - see the [LICENSE] file for details
 
 ## Acknowledgments
-* Ramona Roller
-* Cristian A. Marocico
 * Thomas Hoekstra
 * Finn-Ole Höner
+* Cristian A. Marocico
+* Ramona Roller
 
-## Other valuable links:
-* Jay Jimm
+## Links to data sources
+* Founders Online: https://founders.archives.gov/
+* Letters of Delegates to Congress: https://memory.loc.gov/ammem/amlaw/lwdg.html
+* Eighteenth Century Collections Online (ECCO) TCP: https://textcreationpartnership.org/tcp-texts/ecco-tcp-eighteenth-century-collections-online/
+* Evans Early American Imprints (Evans) TCP: https://textcreationpartnership.org/tcp-texts/evans-tcp-evans-early-american-imprints/
+
+* ## Other valuable sources
+* Jay Timm: https://github.com/jaytimm/founders-online-corpus
 * People of the founding era: https://pfe.upress.virginia.edu/
-* Thomas Hoekstra github
+* Thomas Hoekstra: https://github.com/Rohrym/letters_of_the_revolution_project
+
