@@ -21,7 +21,9 @@ gfiles <- list.files(path      = "data/raw/founders",
                      recursive = TRUE)
 
 path <- "data/raw/founders/"
-ffc <- lapply(paste0(path, gfiles), readRDS) %>% rbindlist() #183715 observations
+ffc <- lapply(paste0(path, gfiles), readRDS) %>%
+  rbindlist() #183715 observations
+
 setDT(ffc)
 
 # 3. PREPROCESSING DATA ----
@@ -254,15 +256,37 @@ ffc5 <- ffc4 %>%
         # the same group_by
         mutate(diff = ifelse(amount != 1, RecordLinkage::levenshteinSim(text,lag(text)),0)) %>%
     ungroup() %>%
-    filter(diff < 0.90)
+    filter(diff < 0.90) %>%
+  select(-amount,-diff)
 
 saveRDS(ffc5, file = "data/interim/ffc_no_duplicates.rds")
+ffc5 <- readRDS("data/interim/ffc_no_duplicates.rds")
 
 ## C) TRANSLATE ALL NON-ENGLISH TEXTS ----
 
-# Function to detect the language of the letter
+# first search for any already-translated letters by the editors which come after
+# the original letter, and keep only the translated part. A translation is
+# marked by "editors’ translation" in the text
+edit_translated <- c("editors’ translation ")
+
+# Add a new variable 'ed_trans' and set it to 1 if any of the words occur,
+# else set to 0
+ffc5 <- ffc5 %>% mutate(ed_trans = as.integer(str_detect(text, edit_translated)))
+table(ffc5$ed_trans) #98 translations by editors
+
+ffc5 <- ffc5 %>%
+  separate(text, c("original", "translation"), sep = edit_translated,remove = F)
+
+# replace the values in 'text' with the corresponding values from 'translation'
+# where 'translation' is not NA and keeps the original 'text' values where
+#'translation' is NA
+ffc5$text <- ifelse(!is.na(ffc5$translation),ffc5$translation, ffc5$text)
+ffc5 <- ffc5 %>% select(-original,-translation,-ed_trans)
+
+# Detect the language of the letter
 detect_language <- function(text) {
     tryCatch({
+      # This function detects the language of a given text using the Google Translate API
         language <- language_detect(text)
         return(language)
     }, error = function(e) {
@@ -271,132 +295,92 @@ detect_language <- function(text) {
     })
 }
 
-# Function to translate text to English. It takes a text string and its
-# corresponding source language as derived in the previous step as input
-translate_to_english <- function(text, source_lang) {
-
-    # If the source language is not English, it uses the google_translate
-    # function to translate the text to English
-    if (source_lang != "en" && source_lang != "No Text" && source_lang != "Unknown" && doc_length < 500) {
-        translated <- google_translate(text,
-                                       target_language = "en",
-                                       source_language = source_lang)
-
-        # Print for troubleshooting
-        if (length(translated) == 0) {
-            cat("Translation failed for:", text, "\n")
-        }
-
-        # If the translation is successful, it returns the translated text
-        return(ifelse(nchar(translated) > 0, translated, "Translation Failed"))
-
-    } else {
-      #otherwise .... (no need for translation)
-      return("see original text column")
-      }
-}
-
 # setup 11 threads
 plan(multisession, workers = 11)
 
-start <- Sys.time()
+# Set seed globally
+future::plan(seed = TRUE)
 
 # detect the language of each letter
 ffc5 <- ffc5 %>%
     mutate(language = furrr::future_map(text, detect_language)) %>%
     as.data.frame()
 
-# overview of all languages
+# overview of all the different languages in the FO corpus
 unique(ffc5$language)
 
-saveRDS(ffc5, file = "data/interim/ffc_language_information.rds")
-ffc5 <- readRDS(file = "data/interim/ffc_language_information.rds")
+saveRDS(ffc5, file = "data/interim/ffc_with_language_information.rds")
+ffc5 <- readRDS(file = "data/interim/ffc_with_language_information.rds")
 
-## Preparing the text for translation ----
-# Ensures that the text is in the UTF-8 format
-ffc5$text_encoded <- iconv(ffc5$text, to = "UTF-8", sub = " ")
-
-# Some translation APIs or services might require spaces to be replaced with "%20" in URLs
-ffc5$text_encoded <- gsub(" ", "%20", ffc5$text_encoded)
-
-# Ensuring that characters are represented in a URL-friendly format
-ffc5$text_encoded <- URLencode(ffc5$text_encoded)
-
-# Null characters might cause issues during translation
-ffc5$text_encoded <- gsub("\\x00", "", ffc5$text_encoded)
-
-# Add a translated text column: setup 11 threads
+# Translate the remaining letters using parallel processing
+# setup 11 threads
 plan(multisession, workers = 11)
 
 # Set seed globally
 future::plan(seed = TRUE)
 
-start <- Sys.time()
-
 translated_texts <- ffc5 %>%
-  filter(language != "en" & doc_length < 500) %>%
-  mutate(translation = future_map_chr(text,
+
+  # 6854 remaining letters to be translated
+  filter(language != "en" & language != "Unknown") %>%
+
+  mutate(translation = furrr::future_map(text,
                        ~ google_translate(.x,
                        target_language = "en",
                        source_language = "auto"),
                        .options = furrr_options(seed = 1))) %>%
-  select(authors2,recipients2,text,text_encoded, translation)
+  select(authors2,recipients2,text,translation) %>%
+  unnest(cols = c(translation)) %>%
 
-# Translate the letters using parallel processing
-translated_texts_1 <- ffc5 %>% slice(1:50000) %>%
-  filter(language != "en" & doc_length < 500) %>%
-  mutate(translation = future_map_chr(text,
-                        ~ google_translate(.x,
-                          target_language = "en",
-                          source_language = "auto"))) %>%
-  select(authors2,recipients2,text,translation)
+  mutate(
+    translation = str_squish(translation),
+    translation = ifelse(startsWith(translation, "body{overflow:auto!important;display:block!important;}"), NA, translation)
+  )
 
-translated_texts_2 <- ffc5 %>% slice(50001:100000) %>%
-  filter(language != "en" & doc_length < 500) %>%
-  mutate(translation = future_map_chr(text,
-                        ~ google_translate(.x,
-                        target_language = "en",
-                        source_language = "auto"))) %>%
-  select(authors2,recipients2,text,translation)
+# check how many letters could not be translated
+translated_texts %>% filter(is.na(translation)) %>% nrow() # 452 could not be translated
 
-# Assuming your dataframe is named 'df' and the column containing text is 'text_column'
-#ffc5$text <- lapply(ffc5$text, function(x) scan(file = textConnection(x), what = character(), fileEncoding = "UTF-8", sep = "\n", allowEscapes = TRUE))
+# setup 11 threads
+# plan(multisession, workers = 11)
+#
+# # Set seed globally
+# future::plan(seed = TRUE)
+#
+# translated_texts2 <- translated_texts %>%
+#   mutate(
+#     translation = ifelse(
+#       is.na(translation),
+#       furrr::future_map(
+#         text,
+#         ~ mymemory_translate(.x, target_language = "en", source_language = "auto"),
+#         .options = furrr_options(seed = 1),
+#         .encoding = "UTF-8"  # Specify the encoding here
+#       ),
+#       translation
+#     )
+#   ) %>%
+#   select(authors2, recipients2, text, translation) %>%
+#   unnest(cols = c(translation))
 
+saveRDS(translated_texts, file = "data/interim/translated_texts.rds")
+translated_texts <- readRDS(file = "data/interim/translated_texts.rds")
 
-translated_texts_3 <- ffc5 %>% slice(100001:nrow(ffc5)) %>%
-  filter(language != "en" & doc_length < 500) %>%
-  #mutate(text = URLencode(text)) %>%
-  mutate(translation = future_map_chr(text,
-                        ~ google_translate(.x,
-                        target_language = "en",
-                        source_language = "auto"))) %>%
-  select(authors2,recipients2,text,translation)
-
-translated_texts <- rbind(translated_texts_1,translated_texts_2,translated_texts_3)
-
-saveRDS(translated_texts, file = "data/interim/translated_texts_500.rds")
-translated_texts <- readRDS(file = "data/interim/translated_texts_500.rds")
-
-
-# Join the translated texts to the original data frame
-ffc5 <- ffc5 %>%
+# Join the translated texts back into  the original dataframe
+ffc5_translated <- ffc5 %>%
   left_join(translated_texts, by = c("authors2","recipients2","text")) %>%
-    mutate(translation = ifelse(is.na(translation), text, translation))
+  # update the text variable with the translated text, if any
+  mutate(text = ifelse(is.na(translation),
+                       text, translation))
 
-end <- Sys.time()
-end - start # Time difference of ......
+saveRDS(ffc5_translated, file = "data/interim/ffc5_translated.rds")
 
-saveRDS(ffc5_translated, file = "data/interim/ffc_translated_letters.rds")
-
-display_letter(translated_texts[1,])
 
 ## D) CREATE UNIX-TIME VARIABLE ----
-
 # Since several analyses uses unix timestamps which can only work with dates
 # after 1st January 1970, we convert the sending dates of letters into time
 # differences compared to the very first available date
 
-ffc6 <- ffc5 %>%
+ffc6 <- ffc5_translated %>%
     arrange(date_from) %>%
     # create id
     mutate(id = rownames(ffc5)) %>%
@@ -415,7 +399,7 @@ ffc6 <- ffc5 %>%
     rename(sending_date = date_from)
 
 # check amount of letters and variables in the dataframe
-dim(ffc6) # 164062 letters
+dim(ffc6) # 163578 letters
 glimpse(ffc6)
 
 ## E) CREATE IDS ----
