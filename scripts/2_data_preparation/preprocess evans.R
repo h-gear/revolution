@@ -10,11 +10,6 @@
 # https://quod.lib.umich.edu/e/evans/
 
 # 1. LOAD LIBRARIES ----
-library(dplyr)
-library(tidyr)
-library(purrr)
-library(readr)
-library(stringr)
 library(tidyverse)
 
 t_folder <- "C:/Projects/AmericanRevolution/revolution/data/raw/evans/raw_data/"
@@ -72,6 +67,21 @@ evans <- evans %>% mutate(text = tolower(text))
 
 # Save data
 saveRDS(evans, file = "data/raw/evans/evans_5012.rds")
+evans <- readRDS("data/raw/evans/evans_5012.rds")
+
+# A function for displaying a letter & metadata inline
+display_letter <- function(x) {
+  a1 <- strsplit(x$text, '\n')[[1]]
+  a2 <- trimws(a1)
+  a3 <- subset(a2, a2 != '')
+  a4 <- paste(a3, collapse = '\n')
+  a5 <- stringi::stri_extract_first_regex(a4, "\\s*(\\S+\\s*){1,1000}")
+
+  paste('>', gsub(' *(\n*) *$', '\\1', a5))
+}
+
+# example of displaying letter
+display_letter(evans[10,])
 
 # 4. EXTRACT SENTENCE WITH PLACE OF PUBLICATION ----
 
@@ -97,7 +107,7 @@ saveRDS(evans, file = "data/raw/evans/evans_5012.rds")
 # search terms in text used to locate the place of publication
 target_words <- c("print", "printed")
 
-
+publication <- c("place of publication")
 
 # Function to extract surrounding words around target words
 extract_surrounding_words <- function(text, target_words) {
@@ -132,7 +142,8 @@ extract_surrounding_words <- function(text, target_words) {
 # Apply the extract_surrounding_words function to the text column
 evans <- evans %>%
   rowwise() %>%
-  mutate(surrounding_words_print = extract_surrounding_words(text, target_words))
+  mutate(surrounding_words_print = extract_surrounding_words(text, target_words),
+         surrounding_words_publication = extract_surrounding_words(text, publication))
 
 # 5. DATE OF PUBLICATION ----
 
@@ -153,6 +164,49 @@ extract_word_with_colon <- function(text) {
 
   return(result)
 }
+
+# Function to extract place of publication mentioned before ': n.e. printed'
+extract_word_with_ne <- function(text) {
+  # Find words with a colon
+  words_with_ne <- str_extract_all(text, "\\b\\w+\\: n.e. printed")
+
+  if (length(words_with_ne[[1]]) > 0) {
+    result <- str_replace(words_with_ne[[1]][1], ": n.e. printed", "")  # Remove ':'
+  } else {
+    result <- NA  # No match found
+  }
+
+  return(result)
+}
+
+# Function to extract place of publication mentioned before ', n.e. printed'
+extract_word_with_cne <- function(text) {
+  # Find words with a colon
+  words_with_cne <- str_extract_all(text, "\\b\\w+\\, n.e. printed")
+
+  if (length(words_with_cne[[1]]) > 0) {
+    result <- str_replace(words_with_cne[[1]][1], ", n.e. printed", "")  # Remove ':'
+  } else {
+    result <- NA  # No match found
+  }
+
+  return(result)
+}
+
+# Function to extract place of publication mentioned before ', n.e. printed'
+extract_word_with_spne <- function(text) {
+  # Find words with a colon
+  words_with_spne <- str_extract_all(text, "\\b\\w+\\ n.e. printed")
+
+  if (length(words_with_spne[[1]]) > 0) {
+    result <- str_replace(words_with_spne[[1]][1], " n.e. printed", "")  # Remove ':'
+  } else {
+    result <- NA  # No match found
+  }
+
+  return(result)
+}
+
 
 # Function to extract place of publication mentioned directly after 'printed at'
 extract_printed_at  <- function(text) {
@@ -227,6 +281,15 @@ extract_word_with_space <- function(text) {
 extract_combined <- function(text) {
   result <- extract_word_with_colon(text)
   if (is.na(result)) {
+    result <- extract_word_with_ne(text)
+  }
+  if (is.na(result)) {
+    result <- extract_word_with_cne(text)
+  }
+  if (is.na(result)) {
+    result <- extract_word_with_spne(text)
+  }
+  if (is.na(result)) {
     result <- extract_printed_at(text)
   }
   if (is.na(result)) {
@@ -254,13 +317,32 @@ evans2 <- evans %>%
 
 # Count the number of NA values in 'place of publication'
 sum(is.na(evans2$place_of_publication)) # 889
-
 table(evans2$place_of_publication)
 
-# 7. CLEANING PLACE OF PUBLICATION ----
-# extract cities from https://query.wikidata.org/
+# Vector of words to keep
+city <- c("cambridge","cambridg","boston","london","philadelphia","maryland","monmouth","york","massachvset","annapolis","davis","massachusetts","williamsbvrgh",
+"williamsburg","dublin","charlestown","newport","londdon","glasgow","philandelphia","germantown","milton","haven","groton","jersey","hampshire","portsmouth","providence",
+"piladelphia","hartford","iersey","georgia","carolina","salem","newbern","philadelahia","burlington","savannah","norwich","lancaster","watertown","worcester",
+"wilmington","chelmsford","baltimore","danvers","philadelhia","dresden","rochefoucault","chatham","newbury","exeter","westminster","philladephia","bennington",
+"trenton","poughkeepsie","philadeliphia","windsor","charleston","richmond","carlisle","hudson","litchfield","northampton","petersburg","vermont","medford","newton","oxford",
+"portland","stockbridge","windham","catskill","newburyport","lexington","amsterdam","dover","cork","elizabethtown","brunswick","rutland","cooperstown","goshen","hanover",
+"walpole","andover","newfield","newburgh","danbury","leipsick","newhampshire","pennsylvania","washington","hallowell","suffield","schenectady","middletown","springfield",
+"lansingburgh","dedham","whitestown","greenfield","whitehall","amherst","blatchford","emerson","fryeburg","harrisburgh","byfield","newark","vergennes","leipsie","bayley",
+"nashville","wiscasset","haverhill","bedford","virginia","reading","bancroft","wrentham","honeywood","easton","y0rk","columbia","stancliff","newcastle","brooklyn","brookfield",
+"davenport","burling","keach","connecticot","bristol","paris","pittsburgh","geneva","salisbury","norristown","gilmanton")
 
-uscities <- read.csv("data/external/us_cities_1640_1800.csv") %>% as.data.frame() %>%
+# Update the Country column based on the condition
+evans2 <- evans2 %>%
+  mutate(place_of_publication = ifelse(place_of_publication %in% city, place_of_publication, NA))
+
+# 7. CLEANING PLACE OF PUBLICATION ----
+
+# us staes
+usstates <- read.csv("data/external/usstates.csv", sep = ";")
+
+# cities extract from https://query.wikidata.org/
+uscities <- read.csv("data/external/us_cities_1640_1800.csv") %>%
+  as.data.frame() %>%
   rename(city = sLabel,
          state = label) %>%
   mutate(city = tolower(city),
@@ -270,13 +352,36 @@ uscities <- read.csv("data/external/us_cities_1640_1800.csv") %>% as.data.frame(
   separate("coordinates", c("longitude","latitude"), sep = " ",remove = T) %>%
   mutate(longitude = as.numeric(longitude),
          latitude  = as.numeric(latitude)) %>%
-  distinct(city,state, .keep_all = TRUE)
+  distinct(city,state, .keep_all = TRUE)  %>%
+  left_join(usstates, by = c("state" = "state"))
 
-pattern_cities <- paste0("(?i)(", paste0(uscities$city, collapse = "\\b|\\b"), "\\b)")
+pattern_cities <- paste0("(?i)(", paste0(unique(uscities$city), collapse = "\\b|\\b"), "\\b)")
+
+pattern_states <- paste0("(?i)(", paste0(uscities$fullname, collapse = "\\b|\\b"), "\\b)")
+pattern_short <- paste0("(?i)(", paste0(unique(uscities$short), collapse = "\\b|\\b"), "\\b)")
+pattern_enclosed <- paste0("(?i)(", paste0(unique(uscities$enclosed), collapse = "\\b|\\b"), "\\b)")
+
+pattern_states <- paste(pattern_states, pattern_short, pattern_enclosed, sep = "|")
+
+phili <- c("philadelahia","philadelhia","philadeliphia","philadelphia","philandelphia","philladephia","piladelphia")
 
 ## some manual corrections ----
 evans2 <- evans2 %>%
-  mutate(place_of_publication = ifelse(str_detect(surrounding_words_print, "new york")                   & place_of_publication == "york", "new york", place_of_publication),
+  mutate(place_of_publication = ifelse(place_of_publication == "cambridg", "cambridge", place_of_publication),
+         place_of_publication = ifelse(place_of_publication == "connecticot", "connecticut", place_of_publication),
+         place_of_publication = ifelse(place_of_publication == "williamsbvrgh", "williamsburg", place_of_publication),
+         place_of_publication = ifelse(place_of_publication == "southwick", "new london", place_of_publication),
+         place_of_publication = ifelse(place_of_publication == "stonington", "stonington port", place_of_publication),
+         place_of_publication = ifelse(place_of_publication == "y0rk", "york", place_of_publication),
+         place_of_publication = ifelse(place_of_publication == "iersey", "jersey", place_of_publication),
+         place_of_publication = ifelse(place_of_publication == "londdon", "london", place_of_publication),
+         place_of_publication = ifelse(place_of_publication == "leipsick", "leipzig", place_of_publication),
+         place_of_publication = ifelse(place_of_publication == "fryeburg", "freiburg", place_of_publication),
+         place_of_publication = ifelse(place_of_publication == "leipsie", "leipzig", place_of_publication),
+         place_of_publication = ifelse(place_of_publication %in% phili, "philadelphia", place_of_publication),
+         place_of_publication = ifelse(str_detect(surrounding_words_print, "new york")                   & place_of_publication == "york", "new york", place_of_publication),
+         place_of_publication = ifelse(str_detect(surrounding_words_print, "new london")                   & place_of_publication == "london", "new london", place_of_publication),
+         place_of_publication = ifelse(str_detect(surrounding_words_print, "new jersey")                   & place_of_publication == "jersey", "new jersey", place_of_publication),
          place_of_publication = ifelse(str_detect(surrounding_words_print, "charleston, south carolina") & place_of_publication == "carolina", "charleston", place_of_publication),
          place_of_publication = ifelse(str_detect(surrounding_words_print, "boston, in new england")     & place_of_publication == "england", "boston", place_of_publication),
          place_of_publication = ifelse(str_detect(surrounding_words_print, "boston in new england")      & place_of_publication == "england", "boston", place_of_publication),
@@ -287,39 +392,31 @@ evans2 <- evans2 %>%
          place_of_publication = ifelse(str_detect(surrounding_words_print, "providence, in new england") & place_of_publication == "england", "providence", place_of_publication),
          place_of_publication = ifelse(str_detect(surrounding_words_print, "salem, new england")         & place_of_publication == "england", "salem", place_of_publication),
          place_of_publication = ifelse(str_detect(surrounding_words_print, "new bury-port, new england") & place_of_publication == "england", "new bury-port", place_of_publication),
+         place_of_publication = ifelse(str_detect(surrounding_words_print, "providence, rhode island")   & is.na(place_of_publication), "providence", place_of_publication),
+
          place_of_publication = ifelse(str_detect(surrounding_words_print, "boston in n.e.")             & place_of_publication == "e", "boston", place_of_publication),
          place_of_publication = ifelse(str_detect(surrounding_words_print, "boston, n.e.")               & place_of_publication == "e", "boston", place_of_publication),
          place_of_publication = ifelse(str_detect(surrounding_words_print, "boston: n.e.")               & place_of_publication == "e", "boston", place_of_publication),
          place_of_publication = ifelse(str_detect(surrounding_words_print, "boston, in n. e.")           & place_of_publication == "e", "boston", place_of_publication),
-         place_of_publication = ifelse(str_detect(surrounding_words_print, "boston: n. e.")           & place_of_publication == "e", "boston", place_of_publication),
-         place_of_publication = ifelse(str_detect(surrounding_words_print, "boston, n. e.")           & place_of_publication == "e", "boston", place_of_publication),
-         place_of_publication = ifelse(str_detect(surrounding_words_print, "boston n.e.")           & place_of_publication == "e", "boston", place_of_publication),
-         place_of_publication = ifelse(str_detect(surrounding_words_print, "boston. n.e.")           & place_of_publication == "e", "boston", place_of_publication),
+         place_of_publication = ifelse(str_detect(surrounding_words_print, "boston: n. e.")              & place_of_publication == "e", "boston", place_of_publication),
+         place_of_publication = ifelse(str_detect(surrounding_words_print, "boston, n. e.")              & place_of_publication == "e", "boston", place_of_publication),
+         place_of_publication = ifelse(str_detect(surrounding_words_print, "boston n.e.")                & place_of_publication == "e", "boston", place_of_publication),
+         place_of_publication = ifelse(str_detect(surrounding_words_print, "boston. n.e.")               & place_of_publication == "e", "boston", place_of_publication),
          place_of_publication = ifelse(str_detect(surrounding_words_print, "boston, in n.e. ")           & place_of_publication == "e", "boston", place_of_publication),
          place_of_publication = ifelse(str_detect(surrounding_words_print, "boston: in n. e.")           & place_of_publication == "e", "boston", place_of_publication),
-         place_of_publication = ifelse(str_detect(surrounding_words_print, "boston n. e.")           & place_of_publication == "e", "boston", place_of_publication),
+         place_of_publication = ifelse(str_detect(surrounding_words_print, "boston n. e.")               & place_of_publication == "e", "boston", place_of_publication),
+         place_of_publication = ifelse(str_detect(surrounding_words_print, "new haven")                  & place_of_publication == "haven", "new haven", place_of_publication),
+         place_of_publication = ifelse(str_detect(surrounding_words_print, "boston new england")        , "boston", place_of_publication),
+         place_of_publication = ifelse(str_detect(surrounding_words_print, "london, printed. philadelphia, reprinted")   & place_of_publication == "london", "philadelphia", place_of_publication),
 
          # check and compare with cities information ----
-         place_of_publication = ifelse(is.na(place_of_publication), str_extract(evans2$surrounding_words_print, pattern_cities), place_of_publication),
+         place_of_publication = ifelse(is.na(place_of_publication), str_extract(evans2$surrounding_words_print, pattern_cities), place_of_publication))
 
-         # remove irrelevant words
-         place_of_publication = ifelse(place_of_publication %in% c("administration","fire","goldyng","newry","notes","our","author",
-                                                                   "poetry","prayers","g","pth","the","xcii","ii","treatise",
-                                                                   "large","journal","invasion","virgil","callico","quarto",
-                                                                   "a","account","accounts","actually","and","any","are",
-                                                                   "as","be","been","being","bible","books"," contributors",
-                                                                   "elegantly","ever","fairly","first","fore",
-                                                                   "former","formerly", "had","have", "having",
-                                                                   "house","is","lately","lick","my","neatly",
-                                                                   "not","o","or","originally","pamphlet","part",
-                                                                   "partly", "plainly","poem","publick","s",
-                                                                   "schools","separately","some","t021112cw33100685950054802800books",
-                                                                   "their","them","they","two","was","wearing",
-                                                                   "were","who","by","de","great","high",
-                                                                   "in","new","of","on","royal","the","tow",
-                                                                   "under","upon","with","worth"), NA, place_of_publication))
+# extract states information ----
+evans2 <- evans2 %>%
+mutate(state_of_publication = str_extract(surrounding_words_print, pattern_states))
 
-sum(is.na(evans2$place_of_publication)) #940
+sum(is.na(evans2$place_of_publication)) #1469
 
 table(evans2$place_of_publication)
 
