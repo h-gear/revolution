@@ -128,43 +128,26 @@ And repeat
 until finished
 ```
 
-## Little demo
+## Download data
 
-End with an example of getting some data out of the system or using it for a little demo
+This project is based on four datasets:
+- Ecco
+- Evans
+- Founders Online
+- Delegates of Congress
 
+The data for ecco can be found here:
+The data for evans can be found here:
+The data for the Delegates of Congress can be found in this repository as part of the project:
+The data for the Founders Online can be found at: https://github.com/jaytimm/founders-online-corpus
+In addition, the data can also be found here: ......
 
-## Running the tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-## Contributing
-
-Please submit pull requests to us in case you want to participate.
-
-## Versioning
-
-
+## Development
+Check out our [Contributing Guidelines] to get started with development.
+Please submit pull requests to us in case you want to participate. Suggestions, improvements, and edits are most welcome!
 
 ## License
 This project is licensed under the Apache License 2.0 - see the [LICENSE] file for details
-
-## Acknowledgments
-* Thomas Hoekstra
-* Finn-Ole Höner
-* Cristian A. Marocico
-* Ramona Roller
 
 ## Links to data sources
 * Founders Online: https://founders.archives.gov/
@@ -172,8 +155,19 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE] file f
 * Eighteenth Century Collections Online (ECCO) TCP: https://textcreationpartnership.org/tcp-texts/ecco-tcp-eighteenth-century-collections-online/
 * Evans Early American Imprints (Evans) TCP: https://textcreationpartnership.org/tcp-texts/evans-tcp-evans-early-american-imprints/
 
-* ## Other valuable sources
+## Other valuable sources
 * Jay Timm: https://github.com/jaytimm/founders-online-corpus
 * People of the founding era: https://pfe.upress.virginia.edu/
 * Thomas Hoekstra: https://github.com/Rohrym/letters_of_the_revolution_project
+
+## Contact
+If you find any bugs or experience difficulties when using the code in this project, please create a issue on this Github page. If you have any specific questions with respect to our research, or methodology used, please email Thijs Vroegh.
+
+## Acknowledgments
+Our thanks go out to the authors that open-sourced their code, enabling us to create this project that can hopefully be of service to many. Particularly, we like to thank
+the following people:
+* Thomas Hoekstra
+* Finn-Ole Höner
+* Cristian A. Marocico
+* Ramona Roller
 
