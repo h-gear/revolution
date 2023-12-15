@@ -1,6 +1,6 @@
 # Historiographing the Era of the American Revolution <img src="documentation/img/logo.jpg" width="120" align="right" />
 
-## Acronym: HGEAR
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 ### GOAL
 The goal of the HGEAR project is to use digital methods to chart shifts in the character and
