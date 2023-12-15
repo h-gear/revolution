@@ -1,6 +1,8 @@
 # Historiographing the Era of the American Revolution <img src="documentation/img/logo.jpg" width="120" align="right" />
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![GitHub issues](https://img.shields.io/github/issues/username/repo.svg)](https://github.com/h-gear/revolution/issues)
+
 
 ### GOAL
 The goal of the HGEAR project is to use digital methods to chart shifts in the character and
