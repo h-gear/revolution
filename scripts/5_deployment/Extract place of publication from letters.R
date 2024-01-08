@@ -17,54 +17,100 @@
 # 1. LIBRARIES ----
 library(tidyverse)
 library(data.table)
+library(future)
+library(stringi)
+library(furrr)
+
+library(quanteda)
+library(NLP)
+require(openNLP)
+require(openNLPdata)
 
 # 2. LOAD PREPROCESSED FO LETTER DATA ----
-letters <-  readRDS(file = "letters.rds")
+letter_ss <- readRDS(file = "data/processed/founders/letters.rds") %>%
+  select(-amount,-diff) %>% as.data.frame()
 
-# 3. EXTRACTING CITY NAMES FROM FIRST SENTENCES ----
-
-## 3.1. Extracting first sentence ----
-
-letter_ss <- letters %>% select(-amount,-diff)
-
+# 3. EXTRACTING AND PREPROCESSING FIRST SENTENCES ----
 # Extract first sentence in which place of publication is mentioned
-letter_ss$first <- stringr::word(string = letter_ss$content,
-                                 start = 1, end = 13,
-                                 sep = stringr::fixed(" "))
+letter_ss$first <- word(string = letter_ss$content,
+                                 start  = 1,
+                                 end    = 15,
+                                 sep    = fixed(" "))
+
+letter_ss$first <- ifelse(is.na(letter_ss$first), letter_ss$content, letter_ss$first)
+
+letter_ss <- letter_ss %>% slice(25000:30000)
 
 # Remove all special characters except space
 letter_ss$first <- gsub("[^a-zA-Z ]", "", letter_ss$first)
 
+## 1. Part-of-speech tagging (NER) ----
+source("scripts/functions/pos_tag.R")
+
+# Place names generally belong to the category NNP (proper noun, singular)
+# Perform POS tagging on the text column
+letter_ss$first <- pos_tag(letter_ss$first, pos_filter = c("NNP"))
+
+# num_cores <- parallel::detectCores()
+# cat("Number of CPU cores:", num_cores, "\n")
+#
+# # Set up the multisession plan
+# plan(multisession, workers = num_cores - 1)
+#
+# print("Start tagging")
+# tic <- Sys.time()
+#
+# # parallel processing
+# letter_ss$first <- future_map(.x = letter_ss$first,
+#                               ~pos_tag(.x, pos_filter = c("NNP")),
+#                               .progress = TRUE)
+# toc <- Sys.time()
+# print(paste0("Tagging took ", round(toc - tic, digits = 2)))
+#
+# # Explicitly stop parallel processing
+# plan("sequential")
+
 letter_ss$first <- tolower(letter_ss$first)
 
 # remove frequently occurring words that are not relevant for retrieving city
-# and state name
+# and state name. This makes the string to search in much shorter
 bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "august","september","october","november","december",
                "janry", " jany","febry", "feby","decr", "octr", "octobr",
-               "monday","tuesday", "wednesday", "thursday", "friday", "saturday","sunday",
-               "1st","2nd","3rd","4th","5th","6th","7th", "7nd","8th","9th","10th","11th",
-               "12th","13th","14th","15th","16th","17th","18th","19th","20th","21st",
-               "22th","22nd","23th","23rd", "24th","25th","26th","27th","28th",
-               "29th","30th","31th","31st", "22d", "maj gen", "most excellent", "morning",
-               "to the president of the united states", "the president of the united states",
-               "my best friend","most dear sir", "my dear son", "may it please your excellency",
-               "my very dear friend", "not found from", "my dear friend and kinsman", "my dear george",
-               "my dear louisa", "my dearest louisa", "jonathan glover", "general washington",
-               "william washington", "betty washington", "john washington","john stine washington",
-               "lund washington","martha washington", "samuel washington", "général washington", "john glover", "nathanael greene","instructs greene", "john hancoc","robert hanson",
-               "benjamin harrison", "robert hanson harrison,","william heath", "instructs heath", "nathaniel warner", "david waterbury",
-               "to the citizens of","to the citizens of the county", "colonel", "sent wentworth",
-               "fellow citizen of","fellow citizens of", "general", "peter webster", "john ine washington",
-               "john augustine washington","james cleveland", "advance","allen mclane",
-               "letter", "sir ", "colonel chester", "gentn", "harrison",  "stringer",
-               "george washington", "franklin","john adams smith", "smith","dear johnson",
-               "thomas jefferson","jefferson","dear jefferson", "john adams","warren","harriet",
-               "transfer","shaw","post","only","portia","adams", "mon cher",
-               "caroline","the united states","young","universal","humphreys",
-               "united states","yours"," your","in order","yesterday","i had",
-               "having had","we have","received", "you have", "dennis",
-               "edward newenham",
+               "monday","tuesday", "wednesday", "thursday", "friday", "saturday",
+               "sunday","1st","2nd","3rd","4th","5th","6th","7th", "7nd","8th",
+               "9th","10th","11th", "12th","13th","14th","15th","16th","17th",
+               "18th","19th","20th","21st","22th","22nd","23th","23rd","24th",
+               "25th","26th","27th","28th", "29th","30th","31th","31st", "22d",
+               "maj gen", "most excellent", "morning","to the president of the united states",
+               "the president of the united states","president of the united states","my best friend","most dear sir",
+               "my dear son", "my dear grandson","may it please your excellency","my very dear friend",
+               "not found from", "my dear friend and kinsman", "my dear george",
+               "my dear louisa", "my dearest louisa", "jonathan glover","humble",
+               "general washington","william washington", "betty washington",
+               "john stine washington","lund washington","acknd","university",
+               "martha washington", "samuel washington", "général washington",
+               "john glover", "nathanael greene","instructs greene", "john hancoc",
+               "robert hanson","benjamin harrison", "robert hanson harrison,",
+               "william heath", "instructs heath","nathaniel warner","opportunity",
+               "deposit","power","coleman","greenleaf",
+               "david waterbury", "loving","manuscripts","manuscript",
+               "to the citizens of","to the citizens of the county", "colonel",
+               "sent wentworth", "fellow citizen of","fellow citizens of","honbl",
+               "general", "peter webster","john ine washington", "honourable",
+               "business", "class", " duly", "document", "drafted", "friends",
+               "friend","account","accounts","inclosd","inclosed","inclose","incloses",
+               "inclosing","inclosure","john augustine washington","james cleveland",
+               "advance","allen mclane","letter", "sir ", "colonel chester",
+               "gentn", "harrison",  "stringer","george washington", "franklin",
+               "john adams smith", "smith","dear johnson","thomas jefferson",
+               "jefferson","dear jefferson", "john adams","warren","harriet",
+               "transfer","shaw","post","only","portia","adams","adamss", "mon cher",
+               "caroline","young","universal","humphreys","missing","revd",
+               "yours"," your","in order","yesterday","i had","copy","copied",
+               "having had","we have","receive","received","recived","reced",
+               "recieved","you have","receiving","recieving","copying",
+               "edward newenham", "serves","served","send","sent","essay", "dennis",
                "john langdon", "private", "septr","it is","my lord duke","monsieur",
                "thomas conway", "thomas nelson", "of the city","city of",
                "benedict arnold", "brigantine", "vice president"," president",
@@ -72,36 +118,47 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "copies","my lord", "page","office","agency","inclosing","i am",
                "mother", "papa","mamma","grandpapa","cousin","honoured","parents",
                "sister","brother","father","hond","madam","uncle","aunt", "honourd",
-               "honorable", "honored", "the honor", "letters","news","contract",
-               "decemr", "my dearest","my dear", "dear","my dearest friend","dearest","friend",
-               "beloved","wife","james clinton","george clinton","henry clinton", "clinton",
-               "general clinton","heath","james hill", "samuel holden","jedediah huntington",
-               "samuel huntington"," lawrence"," henry lee","charles lee", "dear lee","orders lee",
-               "camp near"," head qrs","hd qrs","in the vicinity of","head quarters","head qtr","benjamin lincoln",
-               "lincoln","david mason"," george mason","morgan connor","daniel morgan","john morgan","thomas newton", "johnson",
-               "not found to","edward norwood","joseph palmer","near","camp at","camp on","josiah quincy",
-               "raleigh at sea","edmund randolph","mr. randolph","peyton randolph","randolph","raymond",
-               "on reading", "in reading", "upon reading"," zebedee redding","philip van rensselaer",
-               "joseph spencer", "oliver spencer","sterling complains","temple","thornton",
-               "knox  baillie", "edward snickers","from the green", "bradford",
-               "jonathan trumbull","joseph trumbull","to governors trumbull greene  weare",
-               "verite union","union","vergennes", "walpole","william woodford"," instructs woodford",
-               "john west", "lodge", "valentine", "todd", "john dickinson","day"," congress",
-               "daniel smith", "philip", "william trent","hope", "anthony white","imperial",
-               "saml cook", "john sullivan","the colony", "moore", "lord stirling","camp",
-               "pray","william ramsay",	"alexander mcdougall", "william bartlett",
+               "honorable", "honored","honord", "the honor", "letters","news","contract",
+               "decemr", "my dearest","my dear", "dear","my dearest friend",
+               "dearest","friend"," friendly","beloved","wife","james clinton",
+               "george clinton","henry clinton", "clinton","general clinton",
+               "heath","james hill", "samuel holden","jedediah huntington",
+               "samuel huntington"," lawrence"," henry lee","charles lee",
+               "dear lee","orders lee","camp near"," head qrs","hd qrs",
+               "in the vicinity of","head quarters","head qtr","benjamin lincoln",
+               "book","library", "pleasd","pleased", "lincoln","david mason",
+               " george mason","morgan connor","daniel morgan","john morgan",
+               "thomas newton", "johnson","not found to","edward norwood",
+               "joseph palmer","near","camp at","camp on","josiah quincy",
+               "desired","desire","raleigh at sea","edmund randolph","mr. randolph",
+               "peyton randolph","randolph","raymond","concern","concerned",
+               "advices","advice","adviced","on reading", "in reading",
+               "upon reading"," zebedee redding","philip van rensselaer",
+               "joseph spencer", "oliver spencer","sterling complains","temple",
+               "thornton","knox  baillie", "edward snickers","from the green",
+               "bradford", "jonathan trumbull","joseph trumbull","john west", "lodge",
+               "to governors trumbull greene  weare","verite union","union",
+               "vergennes", "walpole","william woodford"," instructs woodford",
+               "receivd", "received","favours", "mail","written", "wrote",
+               "writing", "writings", "writen", "writings", "history","glad",
+               "common","acknowleged","acknowlege","acknowledgd","acknowledged",
+               "valentine", "todd", "john dickinson","day"," congress","daniel smith",
+               "philip", "william trent","hope", "anthony white","imperial",
+               "saml cook", "john sullivan","the colony", "moore", "lord stirling",
+               "camp", "pray","william ramsay",	"alexander mcdougall", "william bartlett",
                "council","william cushing","george gregory", "liberty", "quarters",
                "henry babcock", "jones",  "joseph reed","joseph","lee", "arnold",
-               "stephen","esqr","head", "qrs", "before", "evening","response","light infantry",
-               "lieutenant",  "benjamin", "tupper","register", "papers" ,"printed",
-               "burr bradley","james bowdoin","loammi baldwin","daniel cunyngham clymer",
-               "committee","militia", "officers","augt","octbr","happy", "delivery",
-               "acknowledge","septemr","septembr","sepr","return","pleasure",
-               "commissioners","messenger"," jany","beg","leave","octbr","nights",
-               "octor","extract","miles","baron","material"," governor","write",
+               "stephen","esqr","esq", "head", "qrs", "before", "evening",
+               "response","light infantry","lieutenant","benjamin", "tupper",
+               "register", "papers" ,"printed","burr bradley","james bowdoin",
+               "loammi baldwin","daniel cunyngham clymer","committee","militia",
+               "officers","augt","octbr","happy", "delivery","acknowledge",
+               "septemr","septembr","sepr","return","pleasure","commissioners",
+               "messenger","beg","leave","octbr","nights","octor",
+               "extract","miles","baron","material"," governor","write",
                "wrote","writing","enclosed","resolves"," doctor","congress",
                "enclosd","background","conversations","honour","augst",
-               "lieut","wheaton","informed","inclose","herewith","directed",
+               "lieut","wheaton","informed","informs","inform", "inclose",
                "agreeable","army","assembly","representatives","ashamed",
                "articles","arrived","arrival", "situation","armstrong",
                "oclo","aprl","approve","approved","appointed","appointment",
@@ -111,49 +168,76 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "majo","otis","advice","company","williamson","benson","attorny",
                "barton","meredith","morgan","colo varick","spencer","paterson",
                "hammond","russell","jackson","girard","le roy","god","eliot",
-               "taylor", "carroll","sweden","wayne","parker","sherman","mason",
+               "taylor", "carroll","wayne","parker","sherman","mason","novbr",
                "stoddard","edwards","stark","replying","monroe","request","trumbull",
                "major", "steuben"," febr","indians","attacked","receipt"," glover",
                "gratz","greene","hancock","mckean","hugh mercer","james mercer",
                "dubois","ogden","returned","intended", "passing","thro",
                "left mount vernon","winthrop","captain turner", " capt turner",
-               "enclose","ware bound","whately")
+               "enclose","encloses","ware bound","whately","franklins",
+               "sir", "mr", "letter", "dear", "dr","dr—", "mrs", "pd", "sr",
+               "january", "february", "march", "april", "may", "june", "july",
+               "august", "september","october","november","december", "decbr", "thos",
+               "b","c","p","h","go", "aug", "sept","oct","nov","dec", "janry",
+               "jany","febry", "feby", "decr", "octr", "octobr","jan",
+               "wm","tis", "ca","gw", "novr","monday","tuesday", "wednesday",
+               "thursday", "friday", "saturday","saturdays","sunday", "octo", "novemr",
+               "1st","2nd","3rd","4th","5th","6th","7th", "7nd","8th","9th",
+               "10th","11th","12th","13th","14th","15th","16th","17th","decm",
+               "18th","19th","20th","21st","22th","22nd","23th","23rd","septm",
+               "24th","25th","26th","27th","28th","29th","30th","31th",
+               "31st", "22d","tem","late","dearest","oclock", "o’clock","decre",
+               "things","time","day","morning", "mr", "mr.","letter",
+               "mat","excellency","paper","les","circumstance","article",
+               "consequence","john","gentleman","reason","people","opinion",
+               "character","william", "favour","excelly","excellencys",
+               "excellency’s","williams","answer","shall","one","could","president",
+               "would", "upon","may","&","every","much","might", "with", "petition",
+               "without","two","us","yet","since","also","therefore",
+               "however","never","ever","soon","say","take","give","well",
+               "see","mch","sir","mr","mr.","get","give","want","many",
+               "part","time", "wh","ditto","day","letter","esqr","mrs",
+               "letter","day","person","post","purpose","measure","answer",
+               "mat","subject","circumstance","manner","moment","gentleman",
+               "yesterday","instant","pa","week","par","night","event",
+               "object","paper","month","favour","favor","favored", "reason","regard",
+               "principle","matter","instance","question","time","inst","favorable",
+               "degree","","occasion","honble","hour","behalf","particular",
+               "van","word", "correspondence","issue","lettre","mr","printing",
+               "ladies","recd","yr favr","favr"," favors","considered","proposal",
+               "delivered","deliver","trouble","communicated","communicate",
+               "announcing","announced","announces","announcing","announced",
+               "recieve","lord","secretary","transmitting","transmitted","transmit",
+               "esteemed","esteem","mention","submitted","submit","submitting",
+               "personally","person","personage","personages","personage’s",
+               "department","addressing","addressed","address","proposing",
+               "propose","proposed","proposes","respect","respecting","respects",
+               "respected","dated","date","dated","dates","newspaper",
+               "proceedings","herewith","directed","forget","forgot","forgotten",
+               "reply","replied","replies","acknowledging","noon",
+               "venerable","yrs","yr","majr","learn","learned","learnt","regret",
+               "heard","hear","finished","finish","finishing","finished",
+               "ocr", "stating","dcr","professor","indenture","handed",
+               "offers", "acknowledgments","deeply", "regretted","continue",
+               "continued","waggon","permit me","permit","apologies",
+               "consideration","consider","considered","considering",
+               "expressed","express","expresses","expressing","previous",
+               "requested","request","requests","requesting","confidential",
+               "publication","unexpected","unexpectedly","expect","expects",
+               "expected","afternoon","minutes","return","returned","returns",
+               "returning","son","sons","john quincy adams","josiah quincy",
+               "jay","war","george","daughter","thomas","charlotte","sepbr","sepber",
+               "money","lady","commission","senate","chamber","journal","mama",
+               "grandfather","grandmama","house"," author","nephew","united",
+               "grandmother","hotel","record","tomorow","tomorrow")
 
 all_stop_words <- c(quanteda::stopwords("en"),
                     stopwords::stopwords(source ="snowball"),
                     stopwords::stopwords(source ="smart"),
                     stopwords::stopwords(source ="nltk"),
                     stopwords::stopwords(source ="marimo"),
-                    stopwords::stopwords(source ="stopwords-iso"),
-                    "sir", "mr", "letter", "dear", "dr","dr—", "mrs", "pd", "sr",
-                    "january", "february", "march", "april", "may", "june", "july",
-                    "august", "september","october","november","december", "thos",
-                    "b","c","p","h","go", "aug", "sept","oct","nov","dec", "janry",
-                    " jany","febry", "feby", "decr", "octr", "octobr","jan",
-                    "wm","tis", "ca","gw", "novr","monday","tuesday", "wednesday",
-                    "thursday", "friday", "saturday","sunday", "octo", "novemr",
-                    "1st","2nd","3rd","4th","5th","6th","7th", "7nd","8th","9th",
-                    "10th","11th","12th","13th","14th","15th","16th","17th",
-                    "18th","19th","20th","21st","22th","22nd","23th","23rd",
-                    "24th","25th","26th","27th","28th","29th","30th","31th",
-                    "31st", "22d","tem","late","dearest","oclock", "o’clock",
-                    "things","time","day","morning", "mr", "mr.","letter",
-                    "mat","excellency","paper","les","circumstance","article",
-                    "consequence","john","gentleman","reason","people","opinion",
-                    "character","william", "favour","excelly","excellencys",
-                    "excellency’s","williams","answer","shall","one","could",
-                    "would", "upon","may","&","every","much","might", "with",
-                    "without","two","us","yet","since","also","therefore",
-                    "however","never","ever","soon","say","take","give","well",
-                    "see","mch","sir","mr","mr.","get","give","want","many",
-                    "part","time", "wh","ditto","day","letter","esqr","mrs",
-                    "letter","day","person","post","purpose","measure","answer",
-                    "mat","subject","circumstance","manner","moment","gentleman",
-                    "yesterday","instant","pa","week","par","night","event",
-                    "object","paper","month","favour","favor", "reason","regard",
-                    "principle","matter","instance","question","time","inst",
-                    "degree","","occasion","honble","hour","behalf","particular",
-                    "van","word", "correspondence","issue","lettre","mr")
+                    stopwords::stopwords(source ="stopwords-iso"))
+
 
 # These words in the stopwords list we actually do want to keep in the corpus
 # because these are often used as abbreviations for american states
@@ -163,64 +247,90 @@ remove_from_stopwords <- c("al","ak","az","ar","ca","co","ct","de","fl","ga",
                            "nm","ny","nc","nd","oh","ok","or","pa","ri","sc",
                            "sd","tn","tx","ut","vt","va","wa","wv","wi","wy",
                            "new","pa","n","va","md","mill","ny","so","point",
-                           "nj","ga","nc","pa","vt","md","del","m","st")
+                           "del","m","haven")
 
 all_stop_words <- all_stop_words[!all_stop_words %in% remove_from_stopwords]
 all_stop_words <- c(all_stop_words, bad_words)
 all_stop_words <- unique(all_stop_words)
 
-# remove stopwords from first sentence
+#all_stop_words <- all_stop_words %>% as.data.frame()
+
+# remove stopwords from first sentence (where the place of publication is in)
 letter_ss$first <- tm::removeWords(letter_ss$first, all_stop_words)
 letter_ss$first <- str_squish(letter_ss$first)
 
 # 4. CITY NAMES AND COORDINATES ----
 
-## A) US cities grounded before 1825 ----
+## A) All US cities grounded before 1825 ----
 # https://en.wikipedia.org/wiki/List_of_North_American_settlements_by_year_of_foundation
 # https://opendata.stackexchange.com/questions/13613/is-there-a-dataset-for-historical-us-towns-and-roads
 # https://query.wikidata.org/#select%20distinct%20%3FsLabel%20%3Flabel%20%3Fyear%20%3Fcoordinates%20%7B%0A%20%3Fs%20wdt%3AP31%2Fwdt%3AP279%2a%20wd%3AQ3327870%3B%0A%20%20%20%20wdt%3AP571%20%3Finception%3B%0A%20%20%20%20wdt%3AP625%20%3Fcoordinates%3B%0A%20%20%20%20wdt%3AP131%2Fwdt%3AP131%2Fwdt%3AP5086%20%3Flabel%0A%20bind%20%28year%28%3Finception%29%20as%20%3Fyear%29%0A%20filter%20%28%3Fyear%3C%3D1783%29%0A%20service%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22en%22%20%7D%0A%7D%20order%20by%20%3Fyear%20%3FsLabel
-cities <- read.csv("../../Data/Cities/0_uscities_till1825.csv", sep = ',') %>%
+cities <- read.csv("data/external/1_uscities_till1825.csv", sep = ',') %>%
   as.data.frame() %>%
-  rename(city = sLabel,
-         state = label) %>%
-  mutate(city = tolower(city),
+  rename(city        = sLabel,
+         state       = label) %>%
+  mutate(city        = tolower(city),
+         state       = tolower(state),
          coordinates = coordinates %>%
            str_remove_all(paste(c("Point", "\\(", "\\)"), collapse = "|"))) %>%
   separate("coordinates", c("longitude","latitude"), sep = " ",remove = T) %>%
-  mutate(longitude = as.numeric(longitude),
-         latitude  = as.numeric(latitude)) %>%
-  distinct(city,state, .keep_all = TRUE)
+  mutate(longitude   = as.numeric(longitude),
+         latitude    = as.numeric(latitude)) %>%
+  distinct(city,state,.keep_all = TRUE)
 
-## B) All existing US cities (population > 1000) ----
+## B) All existing US cities with population > 1000 ----
 # data taken from https://public.opendatasoft.com/explore/dataset/geonames-all-cities-with-a-population-1000/information/?disjunctive.cou_name_en&sort=name
-uscities <- read.csv("../../Data/Cities/2_us_cities.csv", sep = ',') %>%
+uscities <- read.csv("data/external/2_us_cities.csv", sep = ',') %>%
   as.data.frame() %>%
   rename_with(tolower) %>%
-  mutate(city = tolower(city)) %>%
-  distinct(city,state_name, .keep_all = TRUE)
+  mutate(city       = tolower(city),
+         state      = tolower(state_code),
+         county     = tolower(county),
+         full_state = tolower(state_name)) %>%
+  distinct(city,state,.keep_all = TRUE) %>%
+  select(city,state,full_state, county, latitude, longitude)
 
 ## C) All cities in the world ----
-allcities <- read.csv("../../Data/Cities/allcities.csv", sep = ';') %>%
+# data taken from xxxx TODO
+allcities <- read.csv("data/external/3_allcities.csv", sep = ';') %>%
   as.data.frame() %>%
-  mutate(Name = tolower(Name)) %>%
-  rename(city = Name) %>%
-  separate("Coordinates", c("latitude","longitude"), sep = " ",remove = F) %>%
-  select(city,Country.name.EN ,Timezone,latitude,longitude) %>%
+  mutate(Name = tolower(Name),
+         Alternate.Names = tolower(Alternate.Names)) %>%
+  rename(city      = Name,
+         state     = Admin1.Code,
+         country   = Country.name.EN,
+         citynames = Alternate.Names) %>%
 
-  # we only want cities in Europe and america
-  filter(str_detect(Timezone, "Europe|America"))
+  # we'll focus on cities in Europe and North America
+  filter(str_detect(Timezone, "Europe") | LABEL.EN == "United States") %>%
+  separate("Coordinates", c("latitude","longitude"), sep = " ",remove = F) %>%
+  select(city,state, citynames, country,latitude,longitude) %>%
+  filter(country != "") %>%
+  mutate(state    = tolower(state),
+         state = if_else(str_detect(state, "^[0-9]"), NA_character_, state),
+         citynames = str_replace(citynames, "\\s\\s.*", ""),
+         citynames = paste(city, citynames, sep = ",")) %>%
+  rowwise() %>%
+  mutate(citynames = str_c(unique(str_split(citynames, ",")[[1]]), collapse = ",") %>%
+           str_remove(",+$"))
 
 allcities$latitude  <- as.numeric(gsub(",","",allcities$latitude))
 allcities$longitude <- as.numeric(allcities$longitude)
 
-# This expression, with the case-insensitive modifier and word boundaries, is
-# used to match city names in a case-insensitive way and as whole words
-# < 1825
-pattern  <- paste0("(?i)(", paste0(cities$city,   collapse = "\\b|\\b"), "\\b)")
+# distinct city names
+cities_distinct    <- cities    %>% distinct(city)
+uscities_distinct  <- uscities  %>% distinct(city)
+allcities_distinct <- allcities %>% distinct(city)
+
+city_search <- rbind(cities_distinct, uscities_distinct, allcities_distinct) %>%
+  distinct(city)
 
 # 5. MATCHING CITIES IN THE LETTERS ----
 
-## A) city name ----
+# We first extract the city name, regardless for the moment whether
+# the city had duplicates
+
+## A) Extract city name ----
 letter_ss$first <- str_replace(letter_ss$first, "grosvenor square", "london")
 letter_ss$first <- str_replace(letter_ss$first, "grovenor square", "london")
 letter_ss$first <- str_replace(letter_ss$first, "grosr. sqr", "london")
@@ -250,19 +360,20 @@ letter_ss <- letter_ss %>%
                           str_detect(first, "allen town") ~ "allen town",
                           str_detect(first, "fishkill")   ~ "fishkill",
                           str_detect(first, "the haye")      ~ "the hague",
+                          str_detect(first, "la haye")      ~ "the hague",
                           str_detect(first, "la haie")      ~ "the hague",
-                          str_detect(first, "travellersrest")~ "travelers rest",
-                          str_detect(first, "jacobs creek")~ "jacobs creek",
-                          str_detect(first, "sunsbury")~ "sunbury",
-                          str_detect(first, "esopus")~ "esopus",
-                          str_detect(first, "gloster")~ "gloster",
-                          str_detect(first, "cross creek")~ "cross creek",
-                          str_detect(first, "marstrand")~ "marstrand",
-                          str_detect(first, "masterland")~ "masterland",
-                          str_detect(first, "the hage")   ~ "the hague",
-                          str_detect(first, "epping forest")   ~ "epping forest",
-                          str_detect(first, "new york")   ~ "new york",
-                          str_detect(first, "newyork")    ~ "new york",
+                          str_detect(first, "travellersrest") ~ "travelers rest",
+                          str_detect(first, "jacobs creek")   ~ "jacobs creek",
+                          str_detect(first, "sunsbury")       ~ "sunbury",
+                          str_detect(first, "esopus")         ~ "esopus",
+                          str_detect(first, "gloster")        ~ "gloster",
+                          str_detect(first, "cross creek")    ~ "cross creek",
+                          str_detect(first, "marstrand")      ~ "marstrand",
+                          str_detect(first, "masterland")     ~ "masterland",
+                          str_detect(first, "the hage")       ~ "the hague",
+                          str_detect(first, "epping forest")  ~ "epping forest",
+                          str_detect(first, "new york")       ~ "new york",
+                          str_detect(first, "newyork")        ~ "new york",
                           str_detect(first, "boston road")    ~ "boston road",
                           str_detect(first, "la coruña")  ~ "la coruña",
                           str_detect(first, "bourdeaux")  ~ "bordeaux",
@@ -291,6 +402,9 @@ letter_ss <- letter_ss %>%
                           str_detect(first, "helvoetsluys") ~ "hellevoetsluis",
                           str_detect(first, "leesburg") ~ "leesburg",
                           str_detect(first, "fort mercer") ~ "fort mercer",
+                          str_detect(first, "montpr") ~ "montpellier",
+                          str_detect(first, "montper") ~ "montpellier",
+                          str_detect(first, "montplr") ~ "montpellier",
                           str_detect(first, "hudsons river") ~ "hudsons river",
                           str_detect(first, "claverack")~ "claverack",
                           str_detect(first, "cortlandts manor") ~ "cortlandts manor",
@@ -315,12 +429,14 @@ letter_ss <- letter_ss %>%
                           str_detect(first, "east chester") ~ "east chester",
                           str_detect(first, "stony field") ~ "stony field",
                           str_detect(first, "richmond hill") ~ "richmond hill",
+                          str_detect(first, "richd") ~ "richmond",
                           str_detect(first, "hampton falls") ~ "hampton falls",
                           str_detect(first, "philadelpa")    ~ "philadelphia",
                           str_detect(first, "hiladelphia")    ~ "philadelphia",
                           str_detect(first, "phyladelphia")  ~ "philadelphia",
                           str_detect(first, "philadelp")     ~ "philadelphia",
                           str_detect(first, "phildelphia")   ~ "philadelphia",
+                          str_detect(first, "philadelphie")   ~ "philadelphia",
                           str_detect(first, "charlestown")   ~ "charlestown",
                           str_detect(first, "washington dc")   ~ "washington city",
                           str_detect(first, "washington city")   ~ "washington city",
@@ -543,46 +659,58 @@ letter_ss <- letter_ss %>%
                           str_detect(first, "bullskin") ~ "bullskin",
                           str_detect(first, "bulskn") ~ "bullskin",
                           str_detect(first, "yorke") ~ "york",
+                          .default = NA_character_))
 
-                          # corunna
-                          # bilbao
-                          # brest
-                          # msterdam
-                          # rotterdam
-                          # ferrol
-                          # bayonne
-                          # minden
-                          # bruxelles
-                          # dobbss ferrey
-                          # st germain
-                          # lausanne
-                          # amiens
-                          # libourne
-                          # vlles
-                          # dunkirk
+# save results
+saveRDS(letter_ss, file = "data/interim/geo_extraction.rds")
 
-                          # extract city name from
-                          .default = stringr::str_extract(letter_ss$first, pattern)))
+# if city name is still missing, try to look it up in city_search list of cities
 
-## B) state name ----
+num_cores <- parallel::detectCores()
+cat("Number of CPU cores:", num_cores, "\n")
+
+# Set up the multisession plan
+plan(multisession, workers = num_cores - 1)
+
+print("Start model fit")
+tic <- Sys.time()
+
+# match city names in a case-insensitive way and as whole words
+pattern  <- paste0("(?i)(", paste0(city_search$city, collapse = "\\b|\\b"), "\\b)")
+#pattern <- str_replace_all(pattern, fixed("|"), "\\|")  # Escape | in the pattern
+
+# Define the function to extract city based on the condition
+extract_city <- function(first, city) {
+  city[is.na(city)] <- str_extract(first[is.na(city)], pattern)
+  return(city)
+}
+
+letter_selection <- letter_ss %>% slice(1:5000)
+
+# Use furrr to parallelize the mutate operation
+letter_selection <- letter_selection %>%
+  mutate(
+    city = future_map2(
+      .x = first,
+      .y = city,
+      .f = extract_city,
+      .progress = TRUE
+    )
+  )
+
+toc <- Sys.time()
+print(paste0("Matching the city name took ", round(toc - tic, digits = 2)))
+
+# Explicitly stop parallel processing
+plan("sequential")
+
+
+# save results again
+saveRDS(letter_ss, file = "data/interim/geo_extraction.rds")
+
+## B) Extract us-state name ----
 
 # looking for both state abbreviations and full state names
-# Define state codes with full names
-state_codes <- c(
-  "ala" = "Alabama", "alas" = "Alaska", "az" = "Arizona", "ar" = "Arkansas", "cal" = "California",
-  "co" = "Colorado", "ct" = "Connecticut", "del" = "Delaware", "fl" = "Florida", "ga" = "Georgia",
-  "hi" = "Hawaii", "id" = "Idaho", "il" = "Illinois", "ind" = "Indiana", "ia" = "Iowa",
-  "ks" = "Kansas", "ky" = "Kentucky", "louis" = "Louisiana", "mai" = "Maine", "md" = "Maryland",
-  "ma" = "Massachusetts", "mi" = "Michigan", "mn" = "Minnesota", "ms" = "Mississippi",
-  "mo" = "Missouri", "mt" = "Montana", "ne" = "Nebraska", "nv" = "Nevada", "nh" = "New Hampshire",
-  "nj" = "New Jersey", "nm" = "New Mexico", "ny" = "New York", "nc" = "North Carolina",
-  "nd" = "North Dakota", "oh" = "Ohio", "ok" = "Oklahoma", "ore" = "Oregon", "pa" = "Pennsylvania",
-  "ri" = "Rhode Island", "sc" = "South Carolina", "sd" = "South Dakota", "tn" = "Tennessee",
-  "tx" = "Texas", "ut" = "Utah", "vt" = "Vermont", "va" = "Virginia", "wa" = "Washington",
-  "wv" = "West Virginia", "wi" = "Wisconsin", "wy" = "Wyoming"
-)
-
-# Define state names
 state_names <- c("alabama", "alaska", "arizona", "arkansas", "california",
                  "colorado", "connecticut", "delaware", "florida", "georgia",
                  "hawaii", "idaho", "illinois", "indiana", "iowa",
@@ -602,7 +730,6 @@ state_abbreviations <- c("ak", "az", "ar", "co", "ct", "fl", "ga",
                          "nm", "ny", "nc", "nd", "oh", "pa", "ri", "sc",
                          "sd", "tn", "tx", "ut", "vt", "va", "wa", "wv", "wi", "wy")
 
-
 # Define common abbreviations using 3 or 4 characters
 state_abbreviations_common_3_4 <- c("ala", "alas", "ari", "ark", "cali", "colo", "conn", "del",
                                     "fla", "geo", "haw", "ida", "ill", "indi", "iowa", "kans",
@@ -612,30 +739,32 @@ state_abbreviations_common_3_4 <- c("ala", "alas", "ari", "ark", "cali", "colo",
                                     "penn", "rhode", "caro", "dako", "tenn", "texa", "utah",
                                     "verm", "virg", "wash", "west", "wisc", "wyo")
 
-# Create a comprehensive pattern with spaces
-comprehensive_pattern <- paste0("(?i)(", paste(c(names(state_codes),
-                                                 state_abbreviations, state_names),
-                                               collapse = "\\b|\\b"), "\\b)")
+comprehensive_pattern <- paste0("(?i)(", paste0(state_abbreviations,
+                                                state_abbreviations_common_3_4,
+                                                state_names,
+                                                collapse = "\\b|\\b"), "\\b)")
 
-# Extract state information from the 'letter_ss' dataframe
+# Extract state information from the letter data
 letter_ss$state <- str_extract(letter_ss$first, comprehensive_pattern)
+
+unique(letter_ss$state)
 
 # Define the state mapping rules
 state_mapping <- case_when(
-  str_detect(letter_ss$first, " mass") ~ "MA",
-  str_detect(letter_ss$first, "newyork") ~ "NY",
-  str_detect(letter_ss$first, "n york") ~ "NY",
-  str_detect(letter_ss$first, "penn") ~ "PA",
-  str_detect(letter_ss$first, "chester pa") ~ "PA",
-  str_detect(letter_ss$first, "county pa") ~ "PA",
-  str_detect(letter_ss$first, "chesnut hill pa") ~ "PA",
-  str_detect(letter_ss$first, "dc") ~ "DC",
-  str_detect(letter_ss$first, "maryland") ~ "MD",
-  str_detect(letter_ss$first, "havre de grace") ~ "MD",
-  str_detect(letter_ss$first, "george town potomac") ~ "DC",
-  str_detect(letter_ss$first, "george town columa") ~ "DC",
-  str_detect(letter_ss$first, "george town columbia") ~ "DC",
-  str_detect(letter_ss$first, "west point") ~ "NY",
+  str_detect(letter_ss$first," mass") ~ "MA",
+  str_detect(letter_ss$first,"newyork") ~ "NY",
+  str_detect(letter_ss$first,"n york") ~ "NY",
+  str_detect(letter_ss$first,"penn") ~ "PA",
+  str_detect(letter_ss$first,"chester pa") ~ "PA",
+  str_detect(letter_ss$first,"county pa") ~ "PA",
+  str_detect(letter_ss$first,"chesnut hill pa") ~ "PA",
+  str_detect(letter_ss$first,"dc") ~ "DC",
+  str_detect(letter_ss$first,"maryland") ~ "MD",
+  str_detect(letter_ss$first,"havre de grace") ~ "MD",
+  str_detect(letter_ss$first,"george town potomac") ~ "DC",
+  str_detect(letter_ss$first,"george town columa") ~ "DC",
+  str_detect(letter_ss$first,"george town columbia") ~ "DC",
+  str_detect(letter_ss$first,"west point") ~ "NY",
   str_detect(letter_ss$first,"alabama") ~ "AL",
   str_detect(letter_ss$first,"alaska") ~"AK",
   str_detect(letter_ss$first,"arizona") ~"AZ",
@@ -700,7 +829,7 @@ state_mapping <- case_when(
   str_detect(letter_ss$first,"n jersey") ~"NJ",
   str_detect(letter_ss$first,"new mexico") ~"NM",
   str_detect(letter_ss$first,"new york") ~"NY",
-  str_detect(letter_ss$city,"new york") ~"NY",
+  str_detect(letter_ss$city ,"new york") ~"NY",
   str_detect(letter_ss$first,"state of n york") ~"NY",
   str_detect(letter_ss$first,"washington ny") ~"NY",
   str_detect(letter_ss$first,"washington nyst") ~"NY",
@@ -756,22 +885,23 @@ state_mapping <- case_when(
   str_detect(letter_ss$first,"chesterfield court ho") ~ "VA",
   str_detect(letter_ss$first,"chesterfield court house") ~ "VA",
   str_detect(letter_ss$first,"chesterfield co") ~ "VA",
-  str_detect(letter_ss$first, "gunstonhall") ~ "VA",
-  str_detect(letter_ss$first, "gunston hall") ~ "VA",
+  str_detect(letter_ss$first,"gunstonhall") ~ "VA",
+  str_detect(letter_ss$first,"gunston hall") ~ "VA",
   str_detect(letter_ss$first,"dumfries va") ~ "VA",
-  str_detect(letter_ss$first, "king william") ~ "VA",
+  str_detect(letter_ss$first,"king william") ~ "VA",
   str_detect(letter_ss$first,"virgin islands") ~"VI",
   str_detect(letter_ss$first,"washington") ~"WA",
   str_detect(letter_ss$first,"west virginia") ~"WV",
   str_detect(letter_ss$first,"wisconsin") ~"WI",
   str_detect(letter_ss$first,"wyoming") ~"WY",
-  str_detect(letter_ss$first, " va") ~ "VA",
-  str_detect(letter_ss$first, "hiladelphia")  ~ "PA",
-  str_detect(letter_ss$first, "providence")  ~ "RI",
-  str_detect(letter_ss$first, "boston")  ~ "MA",
-  str_detect(letter_ss$first, "baltimore")  ~ "MD",
-  str_detect(letter_ss$first, "monticello")  ~ "VA",
-  str_detect(letter_ss$first, "wilmington d")  ~ "DE",
+  str_detect(letter_ss$first," va") ~ "VA",
+  str_detect(letter_ss$first,"hiladelphia")  ~ "PA",
+  str_detect(letter_ss$first,"philadelphia")  ~ "PA",
+  str_detect(letter_ss$first,"providence")  ~ "RI",
+  str_detect(letter_ss$first,"boston")  ~ "MA",
+  str_detect(letter_ss$first,"baltimore")  ~ "MD",
+  str_detect(letter_ss$first,"monticello")  ~ "VA",
+  str_detect(letter_ss$first,"wilmington d")  ~ "DE",
   TRUE ~ NA_character_
 )
 
@@ -781,26 +911,30 @@ letter_ss$state <- case_when(
   TRUE ~ state_mapping
 )
 
-# Filter out non-duplicate cities from the external dataset
-non_duplicate_cities <- cities %>%
-  group_by(city) %>%
-  filter(n() == 1) %>%
-  ungroup()
+# Filter out non-duplicate cities from the cities-before-1825 dataset; for these
+# cities we can unambiguously assign a state
+non_duplicate_cities <- cities %>% group_by(city) %>% filter(n() == 1) %>% ungroup()
 
-# Left join the filtered external data with letter_ss to get missing state
-# information. Now, letter_ss contains both the extracted state information and
-# filled-in state information from the external file
+# In addition to the state information extracted directly from the letter, with
+# a left join with the non-duplicate cities we get additional information on
+# the state
 letter_ss <- left_join(letter_ss, non_duplicate_cities %>% select(city, state),
                        by = c("city" = "city")) %>%
   mutate(state = ifelse(!is.na(state.x), state.x, state.y)) %>%
   select(-state.x, -state.y)
 
+# Filter out non-duplicate cities from the us cities dataset; for these cities
+# we can unambiguously assign a state
+non_duplicate_uscities <- uscities %>% group_by(city) %>% filter(n() == 1) %>% ungroup()
+letter_ss <- left_join(letter_ss, non_duplicate_uscities %>% select(city, state),
+                       by = c("city" = "city")) %>%
+  mutate(state = ifelse(!is.na(state.x), state.x, state.y)) %>%
+  select(-state.x, -state.y)
 
-## C) country name ----
+## C) Extract country name ----
 
-# Keep only the unique cities
-df_unique_cities <- allcities %>% distinct(city, .keep_all = TRUE) %>%
-  rename(country = Country.name.EN)
+# Keep only the unique cities names from the whole world (i.e., America and Europe)
+df_unique_cities <- allcities %>% distinct(city, .keep_all = TRUE)
 
 # Extract unique countries
 unique_countries  <- paste0("(?i)(", paste0(unique(df_unique_cities$country),
@@ -808,19 +942,22 @@ unique_countries  <- paste0("(?i)(", paste0(unique(df_unique_cities$country),
 unique_countries <- tolower(unique_countries)
 
 # Function to extract country information from letter
-extract_country <- function(text, city, state) {
+  extract_country <- function(text, city, state) {
 
   # if american state is available, then it always has to be the United States
   if (!is.na(state) & state != "-") {
-    return("United States")
+    return("united states")
 
+  # if city is available but not the state, it could be in America or Europe
+  # we can try and match it with our dataset which includes all the unique
+  # cities in the world
   } else if (!is.na(city) & is.na(state)) {
-    # if the city is known, we can try and match it with our data which has unique city
+
     country <- df_unique_cities$country[df_unique_cities$city == city]
     return(ifelse(length(country) > 0, country, NA))
 
   } else {
-    # Check if country is explicitly mentioned in the text
+  # Check if country is perhaps explicitly mentioned in the text
     country_mentioned <- stringr::str_extract(text, pattern = unique_countries)
 
     # If mentioned, return it
@@ -846,22 +983,24 @@ letter_ss$country <- mapply(extract_country,
 # some manual corrections for country
 letter_ss <- letter_ss %>%
   mutate(country = case_when(
+
     str_detect(first, "mill prison plymouth") ~ "england",
     str_detect(first, "mill prison") ~ "england",
     str_detect(first, "brittany")    ~ "france",
-    str_detect(first, "new orleans") ~ "USA",
+    str_detect(first, "new orleans") ~ "united states",
     str_detect(first, "orleans")   ~ "france",
     str_detect(first, "nantes")    ~ "france",
     str_detect(first, "turin")     ~ "italy",
     str_detect(first, "normandy")  ~ "france",
 
     str_detect(city, "london")     ~ "england",
+    str_detect(city, "amsterdam")  ~ "netherlands",
     str_detect(city, "paris")      ~ "france",
     str_detect(city, "marstrand")  ~ "sweden",
     str_detect(city, "masterland") ~ "sweden"))
 
 
-# 6. MOST LIKELY PLACE OF PUBLICATION/WRITING ----
+# 6. MOST LIKELY PLACE OF PUBLICATION ----
 
 ## A) create a time variable for each letter ----
 letter_ss <- letter_ss %>%
@@ -891,15 +1030,15 @@ temp_state <- letter_ss %>%
 # Convert to data.table
 setDT(temp_state)
 
-## B) create functions to find most likely place and state of publication if missing ----
+## B) functions to find most likely place & state of publication ----
 
 #   This function can be applied when the place of publication/ writing of an
 #   author at a particular time point is unknown. If so, search for a time span
 #   of -30 and +30 days around that time point to see if the author has sent
-#   another letter in which the location is being mentioned. If so, return that
-#   location as the most likely place where the letter was written. This location
-#   can then be used/copied, assuming that the author lived in the same place
-#   during the time interval of max 30 days
+#   another letter in which the location is being mentioned. If so, this location
+#   can then be used/copied as the most likely place where the letter was written
+#   assuming that the author lived in the same place during the time interval
+#   of max 30 days.
 
 # find city of publication
 city_send_from <- function(rec, dt) {
@@ -935,43 +1074,27 @@ state_send_from <- function(rec, dt) {
   return(destin) # returns with a retrieved city name, if any
 }
 
-# retrieve cities from surrounding data if missing
+# retrieve cities from surrounding data ifstill missing
 letter_ss$city <- ifelse(is.na(letter_ss$city),
-                         purrr::map2(letter_ss$authors,   # input vector 1 name of author
-                                     letter_ss$timediff,  # input vector 2 time difference
-                                     city_send_from),     # function to apply
-                         letter_ss$city) %>%  # city name when it was not missing
-  unlist()
+                         map2(letter_ss$authors,   # input vector 1 name of author
+                              letter_ss$timediff,  # input vector 2 time difference
+                              city_send_from),     # function to apply
+                         letter_ss$city) %>% unlist()     # city name when it was not missing
 
-#check how many are missing after applying city function
-sum(is.na(letter_ss$city))
-
-# all us-cities
-pattern2 <- paste0("(?i)(", paste0(uscities$city, collapse = "\\b|\\b"), "\\b)")
-
-# if city name is still missing, try to look it up in us_cities large dataframe
-letter_ss <- letter_ss %>%
-  as.data.frame() %>%
-  mutate(city_sent_from = case_when(!is.na(city)  ~ city,
-                                    .default = stringr::str_extract(letter_ss$first, pattern2))) %>%
-  select(-city)
-
-sum(is.na(letter_ss$city_sent_from)) #116 na's
-
-# retrieve state from surrounding data if missing
+# retrieve state from surrounding data if still missing
 letter_ss$state <- ifelse(is.na(letter_ss$state),
-                          purrr::map2(letter_ss$authors,
-                                      letter_ss$timediff,
-                                      state_send_from),
-
-                          letter_ss$state) %>%
+                          map2(letter_ss$authors,   # input vector 1 name of author
+                               letter_ss$timediff,  # input vector 2 time difference
+                               state_send_from),    # function to apply
+                                      letter_ss$state) %>% # state name when it was not missing in the first place
   unlist()
 
 #check how many are missing after applying state function
 sum(is.na(letter_ss$state))
 
 letter_ss <- letter_ss %>%
-  rename(state_sent_from = state) %>%
+  rename(state_sent_from = state,
+          city_sent_from = city) %>%
   select(authors:content,first,timediff,
          city_sent_from,
          state_sent_from,
@@ -995,12 +1118,12 @@ letter_ss <- letter_ss %>% left_join(non_duplicate_cities, by = c("city_sent_fro
 
 # if state is not empty, we use state in the join to get the correct cities coordinates
 letter_ss$state <- ifelse(is.na(letter_ss$state),
-                          purrr::map2(letter_ss$authors,letter_ss$timediff,state_send_from),
+                          map2(letter_ss$authors,letter_ss$timediff,state_send_from),
                           letter_ss$state)
 
 letter_ss <- letter_ss %>% as.data.frame() %>%
   mutate(thijs = case_when(!is.na(city_sent_from) & !is.na(state_sent_from)  ~ city,
-                           .default = stringr::str_extract(letter_ss$first, pattern2))) %>%
+                           .default = str_extract(letter_ss$first, pattern2))) %>%
   select(-city)
 
 # if state is empty
