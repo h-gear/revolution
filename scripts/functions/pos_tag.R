@@ -55,7 +55,7 @@ pos_tag <- function(x, pos_filter = c("NNP", "NNPS", "NN", "NNS")){
     pos_tag_annotator
   )
 
-  # function for annotation
+  #function for annotation
   annotateDocuments <- function(doc, pos_filter = NULL) {
     doc <- as.String(doc)
     doc_with_annotations <- NLP::annotate(doc, annotator_pipeline)

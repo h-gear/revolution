@@ -4,7 +4,7 @@
 #'
 #' Author: Thijs Vroegh
 #'
-#' Date script last modified: 24-10-2023
+#' Date script last modified: 20-01-2024
 #'
 #' Description:
 #' This script performs a topic analysis on the Founders Online texts.
@@ -29,7 +29,8 @@
 #' 4) create dataset with input for shiny app
 #'
 #' Input dataset
-#' @param texts     The founders online dataset with ids and letter text
+#' @param letters   The founders online preprocessed dataset with ids and letter
+#'                  text
 
 #' Output
 #' @return          A data frame with an extra column denoting the major topic,
@@ -48,22 +49,25 @@ library(visNetwork)
 library(tidyverse)
 #library(sentopics)
 
+library(NLP)
+require(openNLP)
+require(openNLPdata)
+
 set.seed(1234)
 
-# Reading data ----
-letters <- read.csv("../../Data/FoundingFathers/ffc_total.csv", header = TRUE)
+# Reading in preprocessed data ----
+#letters <- read.csv("../../Data/FoundingFathers/ffc_total.csv", header = TRUE)
+letters  <- readRDS("data/processed/founders/ffc_preprocessed.rds")
 glimpse(letters)
 
-texts <- letters %>%
-    select(id, text,start.year,authors,sending_date) %>%
-    rename(Year = start.year)
+texts <- letters %>% select(id, text, year, authors, sending_date)
 
 # sort data by date
 texts <- texts[order(texts$sending_date),]
 rownames(texts) <- NULL
 
 # Count the occurrences of the word "liberty" to get an impression
-sum(str_count(texts$text, "liberty"))
+sum(str_count(texts$text, "liberty")) #17883
 
 # A function for displaying a letter
 display_letter <- function(x) {
@@ -84,13 +88,11 @@ display_letter(texts[2309,])
 # Text preprocessing ----
 
 ## 1. Part-of-speech tagging (nouns selection) ----
-source("/scripts/functions/pos_tag.R")
+source("scripts/functions/pos_tag.R")
 
 # because of the large dataset, we'll break it up here into 8 parts, POS tag
 # each part and save it before continuing to the next part. In the end, all
 # chunks are put together again, containing the complete dataset with only nouns
-
-# TODO: add parallelization to speed up the process
 
 # Define the number of chunks
 num_chunks <- 8
@@ -120,7 +122,7 @@ for (i in 1:num_chunks) {
   pos_tagged_data[[i]] <- corpus_nouns
 
   # Save the current chunk to a file (adjust the filename as needed)
-  write.csv(corpus_nouns, paste("pos_tagged_chunk_", i, ".csv", sep = ""), row.names = T)
+  write.csv(corpus_nouns, paste("data/interim/pos_tagged_chunk_", i, ".csv", sep = ""), row.names = T)
 
   # Clear memory (optional, depending on available resources)
   rm(current_chunk)
@@ -130,17 +132,17 @@ for (i in 1:num_chunks) {
   start_index <- end_index + 1
 }
 
-saveRDS(pos_tagged_data, file = "RDS/pos_tagged_data.rds")
+saveRDS(pos_tagged_data, file = "data/interim/pos_tagged_data.rds")
 
-# reading the stored data on the pos-tagged data
-#pos_tagged_data <- readRDS(file = "RDS/pos_tagged_data.RDS")
+# reading the stored data on the pos-tagged data, if necessary
+pos_tagged_data <- readRDS(file = "data/interim/pos_tagged_data.rds")
 
 # Flatten the list into a single vector and combine chunks into one vector
 corpus_nouns <- pos_tagged_data %>% unlist()
-saveRDS(corpus_nouns, file = "RDS/corpus_nouns.rds")
+saveRDS(corpus_nouns, file = "data/interim/corpus_nouns.rds")
 
 # reading the stored data on the corpus nouns
-#corpus_nouns <- readRDS(file = "RDS/corpus_nouns.rds")
+#corpus_nouns <- readRDS(file = "data/interim/corpus_nouns.rds")
 
 ## 2. Tokenize ----
 
@@ -223,7 +225,7 @@ remove_from_stopwords <- c("right", "state","states","problem","order","orders",
 all_stop_words <- all_stop_words[!all_stop_words %in% remove_from_stopwords]
 
 # select distinct stopwords
-all_stop_words <- unique(all_stop_words) # 1446 unique stopwords
+all_stop_words <- unique(all_stop_words) # 1451 unique stopwords
 
 # remove stopwords from tokens
 tokens <- tokens_remove(tokens,
@@ -278,7 +280,8 @@ tokens <- tokens_remove(tokens,
 
 ## 3. Lemmatization ----
 # Get lemma table
-lemma <- read.delim("https://github.com/michmech/lemmatization-lists/raw/master/lemmatization-en.txt", sep = "\t")
+#lemma <- read.delim("https://github.com/michmech/lemmatization-lists/raw/master/lemmatization-en.txt", sep = "\t")
+lemma <- read.delim("data/external/lemmatization-en.txt", sep = "\t")
 colnames(lemma) <- c("base", "variant")
 lemma$base    <- tolower(lemma$base)
 lemma$variant <- tolower(lemma$variant)
@@ -293,21 +296,24 @@ tokens_lemmatized <- tokens_replace(tokens,
 
 # convert tokens-object to a list for later analysis
 token_list <- lapply(tokens_lemmatized, unlist)
+
 # Count occurrences of the specified word in the tokens list
 word_counts <- sapply(token_list, function(tokens) sum(tokens == "plantation"))
-# Total occurrences of the word plantation
-sum(word_counts) # 1393
+# Total occurrences of the word "plantation"
+sum(word_counts) # 1335
 
 ## 4. Combine original letters with cleaned letter texts ----
 
 # https://stackoverflow.com/questions/62396405/unlist-all-items-from-quanteda-tokens-object-into-data-frame
 df_texts_cleaned <- data.frame(
-  id = seq_along(tokens_lemmatized),
-  text_cleaned = sapply(tokens_lemmatized, paste, collapse = " "),
-  row.names = NULL) %>%
-  mutate(text_cleaned = str_squish(text_cleaned))
+          id           = seq_along(tokens_lemmatized),
+          text_cleaned = sapply(tokens_lemmatized, paste, collapse = " "),
+          row.names    = NULL) %>%
+          mutate(text_cleaned = str_squish(text_cleaned))
 
+glimpse(texts)
 texts <- texts %>%
+  mutate(id = as.numeric(id)) %>%
   left_join(df_texts_cleaned, by = "id")
 
 ## 5. Create DFM ----
@@ -322,9 +328,8 @@ DFM_lemma <- DFM_lemma[, !(colnames(DFM_lemma) %in% all_stop_words)]
 topfeatures(DFM_lemma, 50)
 
 # see how min_docfreq / min_termfreq affects vocabulary size and number of
-# dropped documents cf. Maier et al. (2020),
-# https://doi.org/10.5117/CCR2020.2.001.MAIE
-source("./helper_functions/dfm_trim_plot.R")
+# dropped documents cf. Maier et al. (2020),https://doi.org/10.5117/CCR2020.2.001.MAIE
+source("scripts/functions/dfm_trim_plot.R")
 
 dfm_trim_plot(DFM_lemma, 1, 40, 1, min_freq = "doc")
 dfm_trim_plot(DFM_lemma, 1, 40, 1, min_freq = "term")
@@ -344,12 +349,17 @@ topfeatures(DFM, 50)
 sum(DFM[, "right"])
 
 # save DFM
-saveRDS(DFM, file = "RDS/DFM.rds")
+saveRDS(DFM, file = "data/interim/DFM.rds")
+
+# The precomputed object is in the data/interim folder
+#DFM <- readRDS("data/interim/DFM.rds")
 
 # DTM (document-term-matrix as in package topicmodels) for coherence function
 DTM <- convert(DFM, to = "topicmodels")
-saveRDS(DTM, file = "RDS/DTM.rds")
-#DTM <- readRDS("RDS/DTM.rds")
+saveRDS(DTM, file = "data/interim/DTM.rds")
+
+# The precomputed object is in the data/interim folder
+#DTM <- readRDS("data/interim/DTM.rds")
 
 # Semi-supervised topic modeling with seeded LDA: model selection ----
 
@@ -368,7 +378,7 @@ saveRDS(DTM, file = "RDS/DTM.rds")
 # between 20 and 30
 
 # create a vector for number of topics to fit.
-n <- seq(20, 30, by = 2)
+n <- seq(15, 35, by = 2)
 
 # Since fitting LDA models is computationally expensive, the furrr package is
 # used to fit all the models. We use distributed LDA with convergence detection
@@ -410,6 +420,9 @@ nr.topics <- div_score_df %>%
   as.numeric()
 
 # plot topic number vs divergence score
+tiff(filename = "output/figures/Number of Topics vs Divergence.tiff", width = 6000, height = 4000, res = 450)
+par(mfrow = c(1,1))
+
 div_score_df %>%
   ggplot(aes(x = num_topics, y = div_score)) +
   geom_point() +
@@ -424,8 +437,9 @@ div_score_df %>%
            label = round(max(div_score_df$div_score),3),
            color = "blue") +
     ggtitle("Number of Topics vs Divergence")
+dev.off()
 
-# -> These first results suggest to look in more detail around 25 topics
+# -> These first results suggest to look in more detail around 29 topics
 
 ## 2. Testing candidate models ----
 
@@ -433,11 +447,6 @@ div_score_df %>%
 # https://maartengr.github.io/BERTopic/getting_started/guided/guided.html#example
 # https://koheiw.github.io/seededlda/articles/pkgdown/distributed.html
 # https://tutorials.quanteda.io/machine-learning/topicmodel/
-
-# Based on expert knowledge from the lead researcher, we'll use seed words in a
-# dictionary to define the topics
-#
-#dict <- dictionary(file = "../../Data/Shico_search/dict.yml")
 
 ## Keyword Dictionary
 # We seed the topic model with a keyword dictionary (see below). We can pass as
@@ -451,6 +460,7 @@ div_score_df %>%
 # or might be divided into smaller topics, then they will not be modeled.
 # Thus, seed topics need to be accurate to accurately converge towards them
 
+#dict <- dictionary(file = "data/external/dict.yml")
 dict <- dictionary(list(
   revolutionary_politics = c("liberty", "liberties",
   "freedom", "right*", "privileges", "consent", "authority", "authorities",
@@ -470,16 +480,16 @@ print(dict)
 
 # checking some word occurrences
 word_counts <- sapply(token_list, function(tokens) sum(tokens == "luxury"))
-# Total occurrences of the word indian
-sum(word_counts) # 486
+# Total occurrences of the word luxury
+sum(word_counts) # 387
 
 word_counts <- sapply(token_list, function(tokens) sum(tokens == "savage"))
 # Total occurrences of the word savage
-sum(word_counts) # 785
+sum(word_counts) # 818
 
 # Given the seed topics, check for models with different amount of residual topics
 
-# While the 25-topic model from above (still ignorant of any seed topics) has
+# While the 29-topic model from above (still ignorant of any seed topics) has
 # the highest divergence, maximal divergence does not necessarily mean that that
 # number of topics yields maximal meaningfulness. So, next We'll explore multiple
 # models with different amounts of residual topics which come on top of the three
@@ -491,15 +501,15 @@ sum(word_counts) # 785
 
 # See https://dataprofessor.net/blog/nlp/gc_topic_model/gc_topic_model_best_fit
 
-# Here, we choose the number of residual topics to inspect (i.e. those in addition
-# to the seed topics as formulated in the dict)
-K_range <- c(20,21,22,23,24)
+# Here, we choose the number of residual topics to inspect, again, those in
+# addition to the 3 seed topics as formulated in the dictionary above
+K_range <- c(23,24,25, 26, 27,28,29)
 
-# So, these amount of topics plus, each time, the 3 seed topics, leading to
-# overall model-testing with 23,24,25,26,27 topics. This ranges around the 25
-# topic model for which we had the maximum divergence found earlier
+# So, these amount of topics plus, each time, the 3 seed topics, leads to
+# overall model-testing with 26,27,28, 29 ,30,31,32 topics. This ranges around
+# the 29 topics for which we had the maximum divergence found earlier
 
-plan(multisession, workers = 4)
+plan(multisession, workers = 11)
 
 start <- Sys.time()
 
@@ -516,12 +526,12 @@ lda_fits <- K_range %>%
     furrr_options(seed = TRUE))
 
 end <- Sys.time()
-end - start # Time difference of 2.076847 hours
+end - start # Time difference of 1.125711 hours
 
-saveRDS(lda_fits, file = "./RDS/lda_fits.rds")
-lda_fits <- readRDS(file = "./RDS/lda_fits.rds")
+saveRDS(lda_fits, file = "data/interim/lda_fits.rds")
+#lda_fits <- readRDS(file = "data/interim/lda_fits.rds")
 
-# accessing the candidate models via
+# If necessary, access the candidate models via:
 # lda23_df <- as_tibble(terms(lda_fits[[1]]))
 
 ## 3. Metrics: exclusivity and coherence ----
@@ -628,10 +638,10 @@ coherence <- function(model, DTM, N = 10) {
 # First, we convert the seeded_lda models to a list of lda model objects with
 # different k's
 sentopics_lda_fits <- lapply(lda_fits, sentopics::as.LDA)
-saveRDS(sentopics_lda_fits, file = "./RDS/sentopics_lda_fits.rds")
+saveRDS(sentopics_lda_fits, file = "data/interim/sentopics_lda_fits.rds")
 
-# Next, for each topic model, we calculate coherence scores of each individual
-# topic within that model
+# Next, for each of the 7 topic models, we calculate coherence scores of each
+# individual topic within that model
 coh      <- lapply(sentopics_lda_fits, coherence, DTM, N = 25)
 coh_mean <- unlist(lapply(coh, mean))
 
@@ -645,7 +655,8 @@ semcoh <- scale(coh_mean)
 exclus <- scale(exc_mean)
 semexc <- rowMeans(cbind(semcoh, exclus)) # mean of scaled sem & exc
 
-par(mfrow = c(1, 1))
+tiff(filename = "output/figures/Mean Coherence & Exclusivity.tiff", width = 6000, height = 4000, res = 450)
+par(mfrow = c(1,1))
 
 plot(semcoh, type = "l", col = "blue", xaxt = "n", lwd = 2, ylim = c(-3, 3),
      main = "Topic Quality", ylab = "Scaled Score", xlab = "Number of Topics")
@@ -656,14 +667,14 @@ axis(1, at = 1:length(K_range), labels = K_range)
 legend("bottomright", c("Semantic Coherence", "Exclusivity (LDAvis lambda = 0)",
                         "Mean Coherence & Exclusivity"),
        col = c("blue", "black", "orange"), lty = "solid", lwd = 1)
-
+dev.off()
 
 ## 4. Semantic granularity ----
 
 # we select two models of different granularity for further inspection
 
 # select indices of desired amount of residual topics k
-select <- K_range %in% c(22, 25)
+select <- K_range %in% c(26, 29)
 candidates_inspect <- lda_fits[select]
 
 ## 5. Quality of single topics ----
@@ -791,12 +802,12 @@ topic_network <- function(model, thresh = 0.15){
 }
 
 # create network of topics for different models to allow for comparison
-topic_network(sentopics_lda_fits[[which(K_range == 22)]])
-topic_network(sentopics_lda_fits[[which(K_range == 25)]])
+topic_network(sentopics_lda_fits[[which(K_range == 26)]])
+topic_network(sentopics_lda_fits[[which(K_range == 29)]])
 
 
 ## 7. Model selection ----
-lda_res <- lda_fits[[which(K_range == 22)]]
+lda_res <- lda_fits[[which(K_range == 26)]]
 
 # extract the most likely words for each topic and inspect these to come up
 # with topic labels
@@ -853,12 +864,12 @@ colnames(theta) <- paste("Topic", 1:K)
 beta <- lda$phi
 colnames(beta) <- paste("Topic", 1:K)
 
-saveRDS(lda,   file = "./RDS/lda.rds")
-saveRDS(theta, file = "./RDS/theta.rds")
-saveRDS(beta,  file = "./RDS/beta.rds")
+saveRDS(lda,   file = "data/interim/lda.rds")
+saveRDS(theta, file = "data/interim/theta.rds")
+saveRDS(beta,  file = "data/interim/beta.rds")
 
 ## top terms ----
-topterms <- sentopics::topWords(model, method = "probability", nWords = 10) %>%
+topterms <- sentopics::topWords(lda, method = "probability", nWords = 10) %>%
   select(topic, word) %>%
   pivot_wider(names_from  = "topic",
               values_from = "word",
@@ -927,7 +938,7 @@ n_docs <- apply(lda$theta, 2, function(x){unname(table(x > 0.5)[2])})
 
 # data frame
 topic_table <- data.frame("ID" = 1:K, topicnames, topterms, prevalence, n_docs)
-saveRDS(topic_table, file = "./RDS/topic_table.rds")
+saveRDS(topic_table, file = "data/interim/topic_table.rds")
 
 
 # Topic analyses (final model) -----
@@ -942,7 +953,7 @@ sentopics::plot_topWords(lda, nWords = 10)
 seed_topics <- as.data.frame(seededlda::terms(lda_res, 25))
 
 # save results
-write.csv(seed_topics,"seed_topics.csv")
+write.csv(seed_topics,"output/tables/seed_topics.csv")
 
 ## 2. Topic probabilities per letter ----
 
@@ -999,9 +1010,9 @@ barplot(prevalence_sorted, horiz = TRUE, las = 1, xlim = c(0, 0.06),
 # original code by https://github.com/mponweiser/thesis-LDA-in-R/blob/master/application-pnas/trends.Rnw
 
 # overall overview of topic prevalence by year
-theta_mean_by_year_by <- by(lda$theta, texts$Year, colMeans)
+theta_mean_by_year_by <- by(lda$theta, texts$year, colMeans)
 theta_mean_by_year    <- do.call("rbind", theta_mean_by_year_by)
-years                 <- levels(factor(texts$Year))
+years                 <- levels(factor(texts$year))
 ts                    <- ts(theta_mean_by_year, start = as.integer(years[1]))
 
 # plot
@@ -1053,7 +1064,7 @@ lda_top_words[nchar(as.character(lda_top_words$term)) >= 3 & lda_top_words$topic
 sentopics::LDAvis(lda)
 
 
-# Create and save dataframe for shiny animated wordcloud and network analyses ----
+# Save dataframe for shiny animated wordcloud and network analyses ----
 
 # transpose the seedtopics so that it can be merged with texts file
 seed_topics <- t(seed_topics) %>% as.data.frame() %>%
@@ -1066,11 +1077,10 @@ letters_with_topics <- texts %>%
   # merge in the topic terms, by topic number
   left_join(seed_topics, by = "topic")
 
-# save results
-# TODO: specify proper directory
-write.csv(letters_with_topics,"letters_with_topics.csv")
+# Save preprocessed data wit htopic information ----
+write.csv(letters_with_topics,"data/processed/founders/letters_with_topic_info.csv")
 
-# show distribution over topics for sample of reviews
+# show distribution over topics for sample of letters
  letters_with_topics %>% sample_n(50) %>%
   select(id, matches("^[0-9]")) %>%
   pivot_longer(-id, names_to = 'topic',values_to = 'probability') %>%
@@ -1089,7 +1099,7 @@ write.csv(letters_with_topics,"letters_with_topics.csv")
 
 #create dataframe for shiny animated wordcloud
  yr_topic_term_freq <- letters_with_topics %>%
-  select(id,text, Year,topic, terms) %>%
+  select(id,text, year,topic, terms) %>%
   rowwise() %>%
   mutate(terms = str_split(terms, ", ")) %>%
   # unnest to create a new row for each word
@@ -1098,12 +1108,12 @@ write.csv(letters_with_topics,"letters_with_topics.csv")
   # we group the data frame by 'year,' 'topic' and 'terms' (individual words)
   # and calculate the sum of the counts for each word using str_count in the
   # 'text' column
-  group_by(Year, topic, terms) %>%
+  group_by(year, topic, terms) %>%
     summarise(word_count = sum(str_count(text, terms))) %>%
     # the dataframe has separate rows for each individual word, with counts
     # per word, per year, and per topic
 
-  group_by(Year, topic) %>%
+  group_by(year, topic) %>%
 
     # regroup the data frame by 'year' and 'group' and calculate the relative
     # occurrence of each word by dividing the word count by the sum of word counts

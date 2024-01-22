@@ -2070,6 +2070,28 @@
       ],
       "Hash": "df58958f293b166e4ab885ebcad90e02"
     },
+    "openNLP": {
+      "Package": "openNLP",
+      "Version": "0.2-7",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "NLP",
+        "openNLPdata",
+        "rJava"
+      ],
+      "Hash": "5f7d832d142f94d1d23e416de9c4a06c"
+    },
+    "openNLPdata": {
+      "Package": "openNLPdata",
+      "Version": "1.5.3-4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "rJava"
+      ],
+      "Hash": "3290d0b7f05b0193d6e5a92c369b5099"
+    },
     "openssl": {
       "Package": "openssl",
       "Version": "2.0.6",

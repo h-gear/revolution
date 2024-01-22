@@ -8,8 +8,8 @@
 # location, and examine whether there are different ideas mentioned in the
 # letters. For example, we can compare the letters written in the US with those
 # in Europe, or those written in the same city but in different years. One
-# problem: there are a lot of cities with the same name in different states or/and
-# in different countries. If the place of writing is missing in the letter or
+# problem: there are a lot of cities with the same name in different states or/
+# and in different countries. If the place of writing is missing in the letter or
 # cannot be clearly specified, this script tries to extract the place of writing
 # from other letters written by the same person within a specified time frame
 # (30 days) to obtain the most likely place of writing.
@@ -20,7 +20,6 @@ library(data.table)
 library(future)
 library(stringi)
 library(furrr)
-
 library(quanteda)
 library(NLP)
 require(openNLP)
@@ -28,54 +27,86 @@ require(openNLPdata)
 
 # 2. LOAD PREPROCESSED FO LETTER DATA ----
 letter_ss <- readRDS(file = "data/processed/founders/letters.rds") %>%
-  select(-amount,-diff) %>% as.data.frame()
+  select(-amount,-diff) %>% as.data.frame() %>%
+  # TODO: remove this later to have the full dataset
+  slice(25000:40000)
 
-# 3. EXTRACTING AND PREPROCESSING FIRST SENTENCES ----
-# Extract first sentence in which place of publication is mentioned
-letter_ss$first <- word(string = letter_ss$content,
+# 3. EXTRACTING AND PREPROCESSING FIRST SENTENCE ----
+
+## 1. Preprocessing ----
+# Extract first sentence in which place of publication is often mentioned
+letter_ss$first_sentence <- word(string = letter_ss$content,
                                  start  = 1,
                                  end    = 15,
                                  sep    = fixed(" "))
 
-letter_ss$first <- ifelse(is.na(letter_ss$first), letter_ss$content, letter_ss$first)
+# letter_ss$first_sentence <- ifelse(is.na(letter_ss$first_sentence),
+#                                      letter_ss$content,
+#                                      letter_ss$first_sentence)
 
-letter_ss <- letter_ss %>% slice(25000:30000)
+# add spaces around commas, replace long dash with space, add spaces after 'Sir'
+add_spaces_and_replace <- function(text) {
+  # Replace comma with space around it
+  text <- gsub(',', ' , ', text)
+  # Replace long dash (em dash) with space
+  text <- gsub('—', ' ', text)
+  # Add space after 'Sir' if it is directly followed by another word
+  text <- gsub('Sir', 'Sir ', text)
+  # Add space after dot if it is followed by another word
+  text <- gsub('Sir.', 'Sir ', text)
+  # Return the modified text
+  return(text)
+}
 
-# Remove all special characters except space
-letter_ss$first <- gsub("[^a-zA-Z ]", "", letter_ss$first)
+# Applying the function to first_sentence
+letter_ss$first_sentence <- sapply(letter_ss$first_sentence, add_spaces_and_replace)
 
-## 1. Part-of-speech tagging (NER) ----
-source("scripts/functions/pos_tag.R")
+# Remove all special characters in first sentence except space and dash
+letter_ss$first_sentence <- gsub("[^a-zA-Z -]", "", letter_ss$first_sentence)
+
+# remove names from senders and receivers when they occur in the first sentence.
+# The remove_words_in_y function splits the words in sender_receiver_names,
+# constructs a regular expression pattern, and then removes those words from the
+# first_sentence, thereby further reducing the string
+
+# First, get all names from senders and receivers
+letter_ss <- letter_ss %>%
+  mutate(sender_receiver_names = paste(authors, recipients, sep = " "),
+         sender_receiver_names = gsub("[^a-zA-Z0-9 ]", "", sender_receiver_names),
+         # Remove all words that are shorter than 2 characters
+         sender_receiver_names = str_replace_all(sender_receiver_names, "\\b\\w{1}\\b", "")
+  )
+
+# remove words from first_sentence that occur in sender_receiver_names
+remove_words_in_y <- function(x, y) {
+  words_to_remove <- str_split(x, "\\s+")[[1]]
+  pattern <- paste0("\\b", words_to_remove, "\\b", collapse = "|")
+  str_replace_all(y, pattern, "")
+}
+
+# Applying the function
+letter_ss <- letter_ss %>%
+  mutate(first_sentence = remove_words_in_y(sender_receiver_names, first_sentence)) %>%
+  select(-sender_receiver_names)
+
+## 2. Part-of-speech tagging ----
 
 # Place names generally belong to the category NNP (proper noun, singular)
-# Perform POS tagging on the text column
-letter_ss$first <- pos_tag(letter_ss$first, pos_filter = c("NNP"))
+source("scripts/functions/pos_tag.R")
 
-# num_cores <- parallel::detectCores()
-# cat("Number of CPU cores:", num_cores, "\n")
-#
-# # Set up the multisession plan
-# plan(multisession, workers = num_cores - 1)
-#
-# print("Start tagging")
-# tic <- Sys.time()
-#
-# # parallel processing
-# letter_ss$first <- future_map(.x = letter_ss$first,
-#                               ~pos_tag(.x, pos_filter = c("NNP")),
-#                               .progress = TRUE)
-# toc <- Sys.time()
-# print(paste0("Tagging took ", round(toc - tic, digits = 2)))
-#
-# # Explicitly stop parallel processing
-# plan("sequential")
+# Remove empty first sentences
+letter_ss <- letter_ss %>% filter(!is.na(first_sentence))
 
-letter_ss$first <- tolower(letter_ss$first)
+# Perform POS tagging on the first sentence
+letter_ss$city_extraction <- pos_tag(letter_ss$first_sentence, pos_filter = c("NNP"))
+
+letter_ss$first_sentence  <- tolower(letter_ss$first_sentence)
+letter_ss$city_extraction <- tolower(letter_ss$city_extraction)
 
 # remove frequently occurring words that are not relevant for retrieving city
 # and state name. This makes the string to search in much shorter
 bad_words <- c("january", "february", "march", "april", "may", "june", "july",
-               "august","september","october","november","december",
+               "august","september","october","november","december", "duplicate",
                "janry", " jany","febry", "feby","decr", "octr", "octobr",
                "monday","tuesday", "wednesday", "thursday", "friday", "saturday",
                "sunday","1st","2nd","3rd","4th","5th","6th","7th", "7nd","8th",
@@ -93,8 +124,8 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "john glover", "nathanael greene","instructs greene", "john hancoc",
                "robert hanson","benjamin harrison", "robert hanson harrison,",
                "william heath", "instructs heath","nathaniel warner","opportunity",
-               "deposit","power","coleman","greenleaf",
-               "david waterbury", "loving","manuscripts","manuscript",
+               "deposit","power","coleman","greenleaf","cooper","street","wyatt",
+               "david waterbury", "loving","manuscripts","manuscript", "honrd",
                "to the citizens of","to the citizens of the county", "colonel",
                "sent wentworth", "fellow citizen of","fellow citizens of","honbl",
                "general", "peter webster","john ine washington", "honourable",
@@ -105,7 +136,7 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "gentn", "harrison",  "stringer","george washington", "franklin",
                "john adams smith", "smith","dear johnson","thomas jefferson",
                "jefferson","dear jefferson", "john adams","warren","harriet",
-               "transfer","shaw","post","only","portia","adams","adamss", "mon cher",
+               "transfer","shaw","post","only","portia","adamss", "mon cher",
                "caroline","young","universal","humphreys","missing","revd",
                "yours"," your","in order","yesterday","i had","copy","copied",
                "having had","we have","receive","received","recived","reced",
@@ -118,7 +149,7 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "copies","my lord", "page","office","agency","inclosing","i am",
                "mother", "papa","mamma","grandpapa","cousin","honoured","parents",
                "sister","brother","father","hond","madam","uncle","aunt", "honourd",
-               "honorable", "honored","honord", "the honor", "letters","news","contract",
+               "honorable", "honored","honord", "the honor", "honor", "letters","news","contract",
                "decemr", "my dearest","my dear", "dear","my dearest friend",
                "dearest","friend"," friendly","beloved","wife","james clinton",
                "george clinton","henry clinton", "clinton","general clinton",
@@ -128,7 +159,7 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "in the vicinity of","head quarters","head qtr","benjamin lincoln",
                "book","library", "pleasd","pleased", "lincoln","david mason",
                " george mason","morgan connor","daniel morgan","john morgan",
-               "thomas newton", "johnson","not found to","edward norwood",
+               "thomas newton", "johnson","not found to","edward norwood", "colo",
                "joseph palmer","near","camp at","camp on","josiah quincy",
                "desired","desire","raleigh at sea","edmund randolph","mr. randolph",
                "peyton randolph","randolph","raymond","concern","concerned",
@@ -142,6 +173,7 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "receivd", "received","favours", "mail","written", "wrote",
                "writing", "writings", "writen", "writings", "history","glad",
                "common","acknowleged","acknowlege","acknowledgd","acknowledged",
+               "acknowledges","marquis","james madison",
                "valentine", "todd", "john dickinson","day"," congress","daniel smith",
                "philip", "william trent","hope", "anthony white","imperial",
                "saml cook", "john sullivan","the colony", "moore", "lord stirling",
@@ -168,7 +200,7 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "majo","otis","advice","company","williamson","benson","attorny",
                "barton","meredith","morgan","colo varick","spencer","paterson",
                "hammond","russell","jackson","girard","le roy","god","eliot",
-               "taylor", "carroll","wayne","parker","sherman","mason","novbr",
+               "taylor", "carroll","wayne","parker","sherman","novbr",
                "stoddard","edwards","stark","replying","monroe","request","trumbull",
                "major", "steuben"," febr","indians","attacked","receipt"," glover",
                "gratz","greene","hancock","mckean","hugh mercer","james mercer",
@@ -226,10 +258,14 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "publication","unexpected","unexpectedly","expect","expects",
                "expected","afternoon","minutes","return","returned","returns",
                "returning","son","sons","john quincy adams","josiah quincy",
-               "jay","war","george","daughter","thomas","charlotte","sepbr","sepber",
+               "jay","war","daughter","thomas","charlotte","sepbr","sepber",
                "money","lady","commission","senate","chamber","journal","mama",
                "grandfather","grandmama","house"," author","nephew","united",
-               "grandmother","hotel","record","tomorow","tomorrow")
+               "grandmother","hotel","record","tomorow","tomorrow",
+               "captain","commandant","exellency"," edward", "coles",
+               "introduces","clark","meeting","colony","samuel chase",
+               "roman","catholic church","connor"," mayor", "cutler",
+               "claiborne","parke custis","america","treasury","revenue")
 
 all_stop_words <- c(quanteda::stopwords("en"),
                     stopwords::stopwords(source ="snowball"),
@@ -241,31 +277,26 @@ all_stop_words <- c(quanteda::stopwords("en"),
 
 # These words in the stopwords list we actually do want to keep in the corpus
 # because these are often used as abbreviations for american states
-remove_from_stopwords <- c("al","ak","az","ar","ca","co","ct","de","fl","ga",
-                           "hi","id","il","in","ia","ks","ky","la","me","md",
-                           "ma","mi","mn","ms","mo","mt","ne","nv","nh","nj",
-                           "nm","ny","nc","nd","oh","ok","or","pa","ri","sc",
-                           "sd","tn","tx","ut","vt","va","wa","wv","wi","wy",
-                           "new","pa","n","va","md","mill","ny","so","point",
-                           "del","m","haven")
+remove_from_stopwords <- c("al","ct","de", "ga","il","in","ky","la","md",
+                           "ma","mi","mn","ms","mo","nh","nj","ny","nc","oh",
+                           "pa","ri","sc","vt","va","new","n","mill","point","st",
+                           "del","m","haven","great","us")
 
 all_stop_words <- all_stop_words[!all_stop_words %in% remove_from_stopwords]
 all_stop_words <- c(all_stop_words, bad_words)
 all_stop_words <- unique(all_stop_words)
-
 #all_stop_words <- all_stop_words %>% as.data.frame()
 
 # remove stopwords from first sentence (where the place of publication is in)
-letter_ss$first <- tm::removeWords(letter_ss$first, all_stop_words)
-letter_ss$first <- str_squish(letter_ss$first)
+letter_ss$city_extraction <- tm::removeWords(letter_ss$city_extraction, all_stop_words)
+letter_ss$city_extraction <- str_squish(letter_ss$city_extraction)
+letter_ss$first_sentence  <- str_squish(letter_ss$first_sentence)
 
 # 4. CITY NAMES AND COORDINATES ----
 
-## A) All US cities grounded before 1825 ----
-# https://en.wikipedia.org/wiki/List_of_North_American_settlements_by_year_of_foundation
-# https://opendata.stackexchange.com/questions/13613/is-there-a-dataset-for-historical-us-towns-and-roads
-# https://query.wikidata.org/#select%20distinct%20%3FsLabel%20%3Flabel%20%3Fyear%20%3Fcoordinates%20%7B%0A%20%3Fs%20wdt%3AP31%2Fwdt%3AP279%2a%20wd%3AQ3327870%3B%0A%20%20%20%20wdt%3AP571%20%3Finception%3B%0A%20%20%20%20wdt%3AP625%20%3Fcoordinates%3B%0A%20%20%20%20wdt%3AP131%2Fwdt%3AP131%2Fwdt%3AP5086%20%3Flabel%0A%20bind%20%28year%28%3Finception%29%20as%20%3Fyear%29%0A%20filter%20%28%3Fyear%3C%3D1783%29%0A%20service%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22en%22%20%7D%0A%7D%20order%20by%20%3Fyear%20%3FsLabel
-cities <- read.csv("data/external/1_uscities_till1825.csv", sep = ',') %>%
+## A) All us-cities before 1835 ----
+# https://query.wikidata.org/
+us_historical_cities <- read.csv("data/external/1_uscities_till1835.csv", sep = ',') %>%
   as.data.frame() %>%
   rename(city        = sLabel,
          state       = label) %>%
@@ -276,11 +307,14 @@ cities <- read.csv("data/external/1_uscities_till1825.csv", sep = ',') %>%
   separate("coordinates", c("longitude","latitude"), sep = " ",remove = T) %>%
   mutate(longitude   = as.numeric(longitude),
          latitude    = as.numeric(latitude)) %>%
-  distinct(city,state,.keep_all = TRUE)
+  # remove city-state duplicates
+  distinct(city,state,.keep_all = TRUE) %>%
+  mutate(country = "united states") %>%
+  select(city,state,country,latitude,longitude)
 
-## B) All existing US cities with population > 1000 ----
+## B) All currently-existing US cities with population > 1000 ----
 # data taken from https://public.opendatasoft.com/explore/dataset/geonames-all-cities-with-a-population-1000/information/?disjunctive.cou_name_en&sort=name
-uscities <- read.csv("data/external/2_us_cities.csv", sep = ',') %>%
+all_us_cities <- read.csv("data/external/2_us_cities.csv", sep = ',') %>%
   as.data.frame() %>%
   rename_with(tolower) %>%
   mutate(city       = tolower(city),
@@ -288,383 +322,419 @@ uscities <- read.csv("data/external/2_us_cities.csv", sep = ',') %>%
          county     = tolower(county),
          full_state = tolower(state_name)) %>%
   distinct(city,state,.keep_all = TRUE) %>%
-  select(city,state,full_state, county, latitude, longitude)
+  mutate(country = "united states") %>%
+  select(city,state,country,latitude,longitude)
+
 
 ## C) All cities in the world ----
 # data taken from xxxx TODO
-allcities <- read.csv("data/external/3_allcities.csv", sep = ';') %>%
+world_cities <- read.csv("data/external/3_allcities.csv", sep = ';') %>%
   as.data.frame() %>%
-  mutate(Name = tolower(Name),
-         Alternate.Names = tolower(Alternate.Names)) %>%
-  rename(city      = Name,
-         state     = Admin1.Code,
-         country   = Country.name.EN,
-         citynames = Alternate.Names) %>%
+  rename(city       = Name,
+         state      = Admin1.Code,
+         country    = Country.name.EN,
+         citynames  = Alternate.Names,
+         population = Population) %>%
+
+  mutate(city       = tolower(city),
+         state      = tolower(state),
+         country    = tolower(country),
+         citynames  = tolower(citynames)) %>%
 
   # we'll focus on cities in Europe and North America
   filter(str_detect(Timezone, "Europe") | LABEL.EN == "United States") %>%
   separate("Coordinates", c("latitude","longitude"), sep = " ",remove = F) %>%
-  select(city,state, citynames, country,latitude,longitude) %>%
+  select(city,state, citynames, country, population,latitude,longitude) %>%
   filter(country != "") %>%
-  mutate(state    = tolower(state),
-         state = if_else(str_detect(state, "^[0-9]"), NA_character_, state),
+  mutate(state = if_else(str_detect(state, "^[0-9]"), NA_character_, state),
          citynames = str_replace(citynames, "\\s\\s.*", ""),
          citynames = paste(city, citynames, sep = ",")) %>%
   rowwise() %>%
   mutate(citynames = str_c(unique(str_split(citynames, ",")[[1]]), collapse = ",") %>%
-           str_remove(",+$"))
+           str_remove(",+$"),
+         latitude  = as.numeric(gsub(",","",latitude)),
+         longitude = as.numeric(longitude)
+         )
 
-allcities$latitude  <- as.numeric(gsub(",","",allcities$latitude))
-allcities$longitude <- as.numeric(allcities$longitude)
+# unique citynames across all dataframes
+unique_cities <- rbind(us_historical_cities %>% distinct(city),
+                       all_us_cities        %>% distinct(city),
+                       world_cities         %>% distinct(city)) %>%
+                  distinct(city)
 
-# distinct city names
-cities_distinct    <- cities    %>% distinct(city)
-uscities_distinct  <- uscities  %>% distinct(city)
-allcities_distinct <- allcities %>% distinct(city)
-
-city_search <- rbind(cities_distinct, uscities_distinct, allcities_distinct) %>%
-  distinct(city)
+# coordinates for all cities
+city_coordinates <- rbind(us_historical_cities,
+                          all_us_cities,
+                          world_cities %>%
+                         select(city,state,country,latitude,longitude)) %>%
+  distinct(city,state,country,.keep_all = TRUE)
 
 # 5. MATCHING CITIES IN THE LETTERS ----
 
-# We first extract the city name, regardless for the moment whether
-# the city had duplicates
+# We first extract the cityname, regardless for the moment whether there are
+# duplicates or not. We'll deal with that later.
 
 ## A) Extract city name ----
-letter_ss$first <- str_replace(letter_ss$first, "grosvenor square", "london")
-letter_ss$first <- str_replace(letter_ss$first, "grovenor square", "london")
-letter_ss$first <- str_replace(letter_ss$first, "grosr. sqr", "london")
-letter_ss$first <- str_replace(letter_ss$first, "grosvr. square", "london")
-letter_ss$first <- str_replace(letter_ss$first, "grovr. sqr.", "london")
-letter_ss$first <- str_replace(letter_ss$first, "grosv. sqr.", "london")
-letter_ss$first <- str_replace(letter_ss$first, "grosv. square", "london")
-letter_ss$first <- str_replace(letter_ss$first, "grosv. square.", "london")
-letter_ss$first <- str_replace(letter_ss$first, "grosvr. sqr.", "london")
-letter_ss$first <- str_replace(letter_ss$first, "g. sqr", "london")
-letter_ss$first <- str_replace(letter_ss$first, "g. sqr.", "london")
-letter_ss$first <- str_replace(letter_ss$first, "grosr. sqr.", "london")
-letter_ss$first <- str_replace(letter_ss$first, "grosv.sqr.", "london")
-letter_ss$first <- str_replace(letter_ss$first, "grosvenor-square.", "london")
-letter_ss$first <- str_replace(letter_ss$first, "soho square", "london")
-letter_ss$first <- str_replace(letter_ss$first, "sir.", "")
-letter_ss$first <- str_replace(letter_ss$first, "auteuil", "paris")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "grosvenor square", "london")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "grovenor square", "london")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "grosr. sqr", "london")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "grosvr. square", "london")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "grovr. sqr.", "london")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "grosv. sqr.", "london")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "grosv. square", "london")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "grosv. square.", "london")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "grosvr. sqr.", "london")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "g. sqr", "london")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "g. sqr.", "london")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "grosr. sqr.", "london")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "grosv.sqr.", "london")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "grosvenor-square.", "london")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "soho square", "london")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "sir.", "")
+letter_ss$city_extraction <- str_replace(letter_ss$city_extraction, "auteuil", "paris")
 
 letter_ss <- letter_ss %>%
-  mutate(city = case_when(str_detect(first, "montezillo") ~ "montezillo",
-                          str_detect(first, "montizillo") ~ "montizillo",
-                          str_detect(first, "montizello") ~ "montizello",
-                          str_detect(first, "sirquincy")  ~ "quincy",
-                          str_detect(first, "piscatua")   ~ "piscatua",
-                          str_detect(first, "leyden")     ~ "leiden",
-                          str_detect(first, "hague")      ~ "the hague",
-                          str_detect(first, "allen town") ~ "allen town",
-                          str_detect(first, "fishkill")   ~ "fishkill",
-                          str_detect(first, "the haye")      ~ "the hague",
-                          str_detect(first, "la haye")      ~ "the hague",
-                          str_detect(first, "la haie")      ~ "the hague",
-                          str_detect(first, "travellersrest") ~ "travelers rest",
-                          str_detect(first, "jacobs creek")   ~ "jacobs creek",
-                          str_detect(first, "sunsbury")       ~ "sunbury",
-                          str_detect(first, "esopus")         ~ "esopus",
-                          str_detect(first, "gloster")        ~ "gloster",
-                          str_detect(first, "cross creek")    ~ "cross creek",
-                          str_detect(first, "marstrand")      ~ "marstrand",
-                          str_detect(first, "masterland")     ~ "masterland",
-                          str_detect(first, "the hage")       ~ "the hague",
-                          str_detect(first, "epping forest")  ~ "epping forest",
-                          str_detect(first, "new york")       ~ "new york",
-                          str_detect(first, "newyork")        ~ "new york",
-                          str_detect(first, "boston road")    ~ "boston road",
-                          str_detect(first, "la coruña")  ~ "la coruña",
-                          str_detect(first, "bourdeaux")  ~ "bordeaux",
-                          str_detect(first, "bordeaux")  ~ "bordeaux",
-                          str_detect(first, "jacksonburgh")  ~ "jacksonboro",
-                          str_detect(first, "paimboeuf")  ~ "paimboeuf",
-                          str_detect(first, "turners clove")  ~ "turners clove",
-                          str_detect(first, "berkley county")  ~ "berkley county",
-                          str_detect(first, "borden town")  ~ "borden town",
-                          str_detect(first, "west point")  ~ "west point",
-                          str_detect(first, "vaugirard")  ~ "paris",
-                          str_detect(first, "newbury port")  ~ "newburyport",
-                          str_detect(first, "nieuport")  ~ "newport",
-                          str_detect(first, "new port")  ~ "newport",
-                          str_detect(first, "madrid")  ~ "madrid",
-                          str_detect(first, "neworleans") ~ "new orleans",
-                          str_detect(first, "ampthill") ~ "ampthill",
-                          str_detect(first, "leghorn")    ~ "livorno",
-                          str_detect(first, "legn")    ~ "livorno",
-                          str_detect(first, "orient")    ~ "lorient",
-                          str_detect(first, "chaillot")    ~ "paris",
-                          str_detect(first, "l orient")    ~ "lorient",
-                          str_detect(first, "lorient")    ~ "lorient",
-                          str_detect(first, "havre")    ~ "le havre",
-                          str_detect(first, "ghent")    ~ "ghent",
-                          str_detect(first, "helvoetsluys") ~ "hellevoetsluis",
-                          str_detect(first, "leesburg") ~ "leesburg",
-                          str_detect(first, "fort mercer") ~ "fort mercer",
-                          str_detect(first, "montpr") ~ "montpellier",
-                          str_detect(first, "montper") ~ "montpellier",
-                          str_detect(first, "montplr") ~ "montpellier",
-                          str_detect(first, "hudsons river") ~ "hudsons river",
-                          str_detect(first, "claverack")~ "claverack",
-                          str_detect(first, "cortlandts manor") ~ "cortlandts manor",
-                          str_detect(first, "newington green") ~ "newington green",
-                          str_detect(first, "newingtongreen") ~ "newington green",
-                          str_detect(first, "friendnewingtongreen") ~ "newington green",
-                          str_detect(first, "whitemarsh")~ "whitemarsh",
-                          str_detect(first, "bigg spring")~ "leesburg",
-                          str_detect(first, "big spring")~ "leesburg",
-                          str_detect(first, "princeton")~ "princeton",
-                          str_detect(first, "fishkill")~ "fishkill",
-                          str_detect(first, "nantes")~ "nantes",
-                          str_detect(first, "perthamboy")~ "perth amboy",
-                          str_detect(first, "fort pitt")~ "fort pitt",
-                          str_detect(first, "harlem")~ "new york",
-                          str_detect(first, "m vernon")~ "mount vernon",
-                          str_detect(first, "mt vernon")~ "mount vernon",
-                          str_detect(first, "elizabeth town")~ "elizabeth town",
-                          str_detect(first, "elizabethtown")~ "elizabeth town",
-                          str_detect(first, "elizth town")~ "elizabeth town",
-                          str_detect(first, "frederick town")~ "frederick town",
-                          str_detect(first, "east chester") ~ "east chester",
-                          str_detect(first, "stony field") ~ "stony field",
-                          str_detect(first, "richmond hill") ~ "richmond hill",
-                          str_detect(first, "richd") ~ "richmond",
-                          str_detect(first, "hampton falls") ~ "hampton falls",
-                          str_detect(first, "philadelpa")    ~ "philadelphia",
-                          str_detect(first, "hiladelphia")    ~ "philadelphia",
-                          str_detect(first, "phyladelphia")  ~ "philadelphia",
-                          str_detect(first, "philadelp")     ~ "philadelphia",
-                          str_detect(first, "phildelphia")   ~ "philadelphia",
-                          str_detect(first, "philadelphie")   ~ "philadelphia",
-                          str_detect(first, "charlestown")   ~ "charlestown",
-                          str_detect(first, "washington dc")   ~ "washington city",
-                          str_detect(first, "washington city")   ~ "washington city",
-                          str_detect(first, "petersburg")     ~ "saint petersburg",
-                          str_detect(first, "st petersbourg") ~ "saint petersburg",
-                          str_detect(first, "philad.")       ~ "philadelphia",
-                          str_detect(first, "phila")         ~ "philadelphia",
-                          str_detect(first, "hiladelphia") ~ "philadelphia",
-                          str_detect(first, "fredericksbg") ~ "fredericksburg",
-                          str_detect(first, "fredericksburg") ~ "fredericksburg",
-                          str_detect(first, "city of washington") ~ "washington city",
-                          str_detect(first, "george town") ~ "georgetown",
-                          str_detect(first, "geo town") ~ "georgetown",
-                          str_detect(first, "fort constitution") ~ "fort constitution",
-                          str_detect(first, "fort george") ~ "fort george",
-                          str_detect(first, "morrissania") ~ "new york",
-                          str_detect(first, "eorg town") ~ "georgetown",
-                          str_detect(first, "new ark") ~ "newark",
-                          str_detect(first, "preakness") ~ "preakness",
-                          str_detect(first, "winter hill") ~ "winter hill",
-                          str_detect(first, "prospect hill") ~ "prospect hill",
-                          str_detect(first, "valentines hill") ~ "valentines hill",
-                          str_detect(first, "fairy hill") ~ "fairy hill",
-                          str_detect(first, "rocky hill") ~ "rocky hill",
-                          str_detect(first, "phills hill") ~ "phills hill",
-                          str_detect(first, "castle hill") ~ "castle hill",
-                          str_detect(first, "ashley hill") ~ "ashley hill",
-                          str_detect(first, "bald hill") ~ "bald hill",
-                          str_detect(first, "keelers hill") ~ "keelers hill",
-                          str_detect(first, "hill new milford") ~ "new milford",
-                          str_detect(first, "spring hill") ~ "spring hill",
-                          str_detect(first, "malvan hill") ~ "malvan hill",
-                          str_detect(first, "malvern hill") ~ "malvern hill",
-                          str_detect(first, "malbern hill") ~ "malvern hill",
-                          str_detect(first, "quaker hill") ~ "quaker hill",
-                          str_detect(first, "chesnut hill") ~ "chesnut hill",
-                          str_detect(first, "bottle hill") ~ "bottle hill",
-                          str_detect(first, "round hill") ~ "round hill",
-                          str_detect(first, "rockey hill") ~ "rockey hill",
-                          str_detect(first, "rocky hill") ~ "rocky hill",
-                          str_detect(first, "lundrocky hill") ~ "rocky hill",
-                          str_detect(first, "r hill") ~ "rocky hill",
-                          str_detect(first, "ocky hill") ~ "rocky hill",
-                          str_detect(first, "peeks hill") ~ "peeks hill",
-                          str_detect(first, "baltimore") ~ "baltimore",
-                          str_detect(first, "hillsborough township") ~ "hillsborough township",
-                          str_detect(first, "jamaica plain") ~ "jamaica plain",
-                          str_detect(first, "wmsburg") ~ "williamsburg",
-                          str_detect(first, "charles town") ~ "charlestown",
-                          str_detect(first, "new kent") ~ "new kent",
-                          str_detect(first, "okeepsie") ~ "poughkeepsie",
-                          str_detect(first, "dobbsferry") ~ "dobbs ferry",
-                          str_detect(first, "havredegrace") ~ "havre de grace",
-                          str_detect(first, "fort lee") ~ "fort lee",
-                          str_detect(first, "frankfort on the main") ~ "frankfurt am main",
-                          str_detect(first, "bergen county") ~ "bergen county",
-                          str_detect(first, "fort montgomery") ~ "fort montgomery",
-                          str_detect(first, "orange town") ~ "orange town",
-                          str_detect(first, "orangetown") ~ "orange town",
-                          str_detect(first, "orange county") ~ "orange county",
-                          str_detect(first, "passaic falls") ~ "passaic falls",
-                          str_detect(first, "passy") ~ "paris",
-                          str_detect(first, "passi") ~ "paris",
-                          str_detect(first, "reading town") ~ "reading town",
-                          str_detect(first, "reading furnace") ~ "reading furnace",
-                          str_detect(first, "rye neck") ~ "rye neck",
-                          str_detect(first, "brunswic") ~ "brunswick",
-                          str_detect(first, "princetown") ~ "princetown",
-                          str_detect(first, "mount vernon") ~ "mount vernon",
-                          str_detect(first, "morris town") ~ "morristown",
-                          str_detect(first, "ware church") ~ "ware church",
-                          str_detect(first, "warwick furnace") ~ "warwick furnace",
-                          str_detect(first, "warwick bucks") ~ "warwick bucks",
-                          str_detect(first, "mount washington") ~ "mount washington",
-                          str_detect(first, "mt washington") ~ "mount washington",
-                          str_detect(first, "worcester township") ~ "worcester township",
-                          str_detect(first, "n york") ~ "new york",
-                          str_detect(first, "york town") ~ "york town",
-                          str_detect(first, "highlands") ~ "highlands",
-                          str_detect(first, "new windsor") ~ "new windsor",
-                          str_detect(first, "new haven") ~ "new haven",
-                          str_detect(first, "newhaven") ~ "new haven",
-                          str_detect(first, "new utrecht") ~ "new york city",
-                          str_detect(first, "plymo") ~ "plymouth",
-                          str_detect(first, "plym") ~ "plymouth",
-                          str_detect(first, "plimouth") ~ "plymouth",
-                          str_detect(first, "piccadilly") ~ "london",
-                          str_detect(first, "eltham") ~ "london",
-                          str_detect(first, "chalsea") ~ "chelsea",
-                          str_detect(first, "portobacco") ~ "port tobacco",
-                          str_detect(first, "porttobacco") ~ "port tobacco",
-                          str_detect(first, "raspberry plain") ~ "leesburg",
-                          str_detect(first, "rasberry plain") ~ "leesburg",
-                          str_detect(first, "cheapside") ~ "cheapside",
-                          str_detect(first, "skipton") ~ "skipton",
-                          str_detect(first, "gunstonhall") ~ "gunston hall",
-                          str_detect(first, "gunston hall") ~ "gunston hall",
-                          str_detect(first, "winchister") ~ "winchester",
-                          str_detect(first, "craven") ~ "london",
-                          str_detect(first, "portsmo") ~ "portsmouth",
-                          str_detect(first, "mount airy") ~ "mount airy",
-                          str_detect(first, "mountvernon") ~ "mount vernon",
-                          str_detect(first, "mount vernon") ~ "mount vernon",
-                          str_detect(first, "mount varnon") ~ "mount vernon",
-                          str_detect(first, "mt vernon") ~ "mount vernon",
-                          str_detect(first, "king william") ~ "king william",
-                          str_detect(first, "alexandria") ~ "alexandria",
-                          str_detect(first, "alexana") ~ "alexandria",
-                          str_detect(first, "little england") ~ "little england",
-                          str_detect(first, "stewarts crossings") ~ "stewarts crossings",
-                          str_detect(first, "mass bay") ~ "massachusetts bay",
-                          str_detect(first, "yough river") ~ "yough river",
-                          str_detect(first, "ashly river") ~ "ashly river",
-                          str_detect(first, "mattapony river") ~ "mattapony river",
-                          str_detect(first, "warburton") ~ "warburton",
-                          str_detect(first, "charlottesville") ~ "charlottesville",
-                          str_detect(first, "braintre") ~ "braintree",
-                          str_detect(first, "saratoga") ~ "saratoga",
-                          str_detect(first, "tionderoga") ~ "tionderoga",
-                          str_detect(first, "tyonderoga") ~ "tionderoga",
-                          str_detect(first, "ticonderoga") ~ "tionderoga",
-                          str_detect(first, "amstdm") ~ "amsterdam",
-                          str_detect(first, "golden square") ~ "london",
-                          str_detect(first, "london") ~ "london",
-                          str_detect(first, "harford town") ~ "harford town",
-                          str_detect(first, "campridge") ~ "cambridge",
-                          str_detect(first, "cambreg") ~ "cambridge",
-                          str_detect(first, "water town") ~ "watertown",
-                          str_detect(first, "pecks kills")~ "peekskill",
-                          str_detect(first, "peckskill")  ~ "peekskill",
-                          str_detect(first, "peekskill")  ~ "peekskill",
-                          str_detect(first, "peeks kill") ~ "peekskill",
-                          str_detect(first, "peaks kiln") ~ "peekskill",
-                          str_detect(first, "philipsburg")~ "philipsburg",
-                          str_detect(first, "bethelem")~ "bethlehem",
-                          str_detect(first, "heckenseck") ~ "heckenseck",
-                          str_detect(first, "hackensack") ~ "hackensack",
-                          str_detect(first, "falls of delaware") ~ "delaware falls",
-                          str_detect(first, "falls township") ~ "falls township",
-                          str_detect(first, "turin") ~ "turin",
-                          str_detect(first, "sussex") ~ "sussex",
-                          str_detect(first, "germantown") ~ "philadelphia",
-                          str_detect(first, "bucks county") ~ "bucks county",
-                          str_detect(first, "amwell") ~ "amwell",
-                          str_detect(first, "corriels ferry") ~ "corriels ferry",
-                          str_detect(first, "keiths") ~ "keiths",
-                          str_detect(first, "versailles") ~ "versailles",
-                          str_detect(first, "dijon") ~ "dijon",
-                          str_detect(first, "paramus") ~ "paramus",
-                          str_detect(first, "new town") ~ "new town",
-                          str_detect(first, "haddonfield") ~ "haddonfield",
-                          str_detect(first, "grafton street") ~ "dublin",
-                          str_detect(first, "montego bay") ~ "montego bay",
-                          str_detect(first, "oyster ponds") ~ "oyster pond",
-                          str_detect(first, "baskenridge") ~ "basking ridge",
-                          str_detect(first, "white plains") ~ "white plains",
-                          str_detect(first, "whiteplains") ~ "white plains",
-                          str_detect(first, "rouen") ~ "rouen",
-                          str_detect(first, "pownalborough") ~ "pownalborough",
-                          str_detect(first, "frenchmans bay") ~ "frenchmans bay",
-                          str_detect(first, "fayette ville") ~ "fayette ville",
-                          str_detect(first, "tarboh") ~ "tarboh",
-                          str_detect(first, "mountpleasant") ~ "mount pleasant",
-                          str_detect(first, "mount plesant") ~ "mount pleasant",
-                          str_detect(first, "algiers") ~ "algiers",
-                          str_detect(first, "eppington") ~ "eppington",
-                          str_detect(first, "springhouse") ~ "spring house",
-                          str_detect(first, "haie") ~ "the hague",
-                          str_detect(first, "bush hill") ~ "philadelphia",
-                          str_detect(first, "brussells") ~ "brussells",
-                          str_detect(first, "versills") ~ "versailles",
-                          str_detect(first, "avignon") ~ "avignon",
-                          str_detect(first, "dunkerque") ~ "dunkerque",
-                          str_detect(first, "castelnaudarry") ~ "castelnaudarry",
-                          str_detect(first, "cheam") ~ "london",
-                          str_detect(first, "londres") ~ "london",
-                          str_detect(first, "bridgeTown barbadoes") ~ "bridgeTown barbadoes",
-                          str_detect(first, "sannois") ~ "sannois",
-                          str_detect(first, "maidenhead") ~ "maidenhead",
-                          str_detect(first, "reedyisland") ~ "reedy island",
-                          str_detect(first, "stenton") ~ "stenton",
-                          str_detect(first, "quebec") ~ "quebec",
-                          str_detect(first, "lond") ~ "london",
-                          str_detect(first, "londn") ~ "london",
-                          str_detect(first, "eliz town") ~ "elizabeth town",
-                          str_detect(first, "coldengham") ~ "coldengham",
-                          str_detect(first, "coldenghame") ~ "coldengham",
-                          str_detect(first, "st germain") ~ "saint germain",
-                          str_detect(first, "lincolnsinnfields") ~ "london",
-                          str_detect(first, "wills creek") ~ "wills creek",
-                          str_detect(first, "fort dunwiddie") ~ "fort dunwiddie",
-                          str_detect(first, "williamsburgh") ~ "williamsburg",
-                          str_detect(first, "williamsbg") ~ "williamsburg",
-                          str_detect(first, "wmburgh") ~ "williamsburg",
-                          str_detect(first, "williamsburgh") ~ "williamsburg",
-                          str_detect(first, "williamsbgh") ~ "williamsburg",
-                          str_detect(first, "allenstown") ~ "allen's town",
-                          str_detect(first, "dogues neck") ~ "dogues neck",
-                          str_detect(first, "maidstone") ~ "maidstone",
-                          str_detect(first, "fort loudoun") ~ "fort loudoun",
-                          str_detect(first, "ort loudoun") ~ "fort loudoun",
-                          str_detect(first, "lewisfort loudoun") ~ "fort loudoun",
-                          str_detect(first, "fort fredrick") ~ "fort frederick",
-                          str_detect(first, "richmd county") ~ "richmond county",
-                          str_detect(first, "bladensbg") ~ "bladensburg",
-                          str_detect(first, "carlile") ~ "carlisle",
-                          str_detect(first, "raystown") ~ "raystown",
-                          str_detect(first, "raestown") ~ "raystown",
-                          str_detect(first, "raes town") ~ "raystown",
-                          str_detect(first, "rays town") ~ "raystown",
-                          str_detect(first, "reas town") ~ "raystown",
-                          str_detect(first, "pensyla") ~ "pennsylvania",
-                          str_detect(first, "pensylva") ~ "pennsylvania",
-                          str_detect(first, "cresaps") ~ "cresap's",
-                          str_detect(first, "montreall") ~ "montreal",
-                          str_detect(first, "wellingborough") ~ "wellingborough",
-                          str_detect(first, "fairhill") ~ "fairhill",
-                          str_detect(first, "wanstead") ~ "london",
-                          str_detect(first, "bulskin") ~ "bullskin",
-                          str_detect(first, "bullskin") ~ "bullskin",
-                          str_detect(first, "bulskn") ~ "bullskin",
-                          str_detect(first, "yorke") ~ "york",
+  mutate(city = case_when(str_detect(city_extraction, "montezillo") ~ "montezillo",
+                          str_detect(city_extraction, "montizillo") ~ "montizillo",
+                          str_detect(city_extraction, "montizello") ~ "montizello",
+                          str_detect(city_extraction, "sirquincy")  ~ "quincy",
+                          str_detect(city_extraction, "piscatua")   ~ "piscatua",
+                          str_detect(city_extraction, "leyden")     ~ "leiden",
+                          str_detect(city_extraction, "hague")      ~ "the hague",
+                          str_detect(city_extraction, "allen town") ~ "allen town",
+                          str_detect(city_extraction, "fishkill")   ~ "fishkill",
+                          str_detect(city_extraction, "the haye")      ~ "the hague",
+                          str_detect(city_extraction, "la haye")      ~ "the hague",
+                          str_detect(city_extraction, "la haie")      ~ "the hague",
+                          str_detect(city_extraction, "travellersrest") ~ "travelers rest",
+                          str_detect(city_extraction, "jacobs creek")   ~ "jacobs creek",
+                          str_detect(city_extraction, "sunsbury")       ~ "sunbury",
+                          str_detect(city_extraction, "esopus")         ~ "esopus",
+                          str_detect(city_extraction, "gloster")        ~ "gloster",
+                          str_detect(city_extraction, "cross creek")    ~ "cross creek",
+                          str_detect(city_extraction, "marstrand")      ~ "marstrand",
+                          str_detect(city_extraction, "masterland")     ~ "masterland",
+                          str_detect(city_extraction, "dunquerque")     ~ "dunkerque",
+                          str_detect(city_extraction, "the hage")       ~ "the hague",
+                          str_detect(city_extraction, "nants")          ~ "nantes",
+                          str_detect(city_extraction, "green mountain") ~ "green mountain",
+                          str_detect(city_extraction, "epping forest")  ~ "epping forest",
+                          str_detect(city_extraction, "new york")       ~ "new york",
+                          str_detect(city_extraction, "newyork")        ~ "new york",
+                          str_detect(city_extraction, "boston road")    ~ "boston road",
+                          str_detect(city_extraction, "la coruña")  ~ "la coruña",
+                          str_detect(city_extraction, "bourdeaux")  ~ "bordeaux",
+                          str_detect(city_extraction, "bordeaux")  ~ "bordeaux",
+                          str_detect(city_extraction, "geo town")  ~ "george town",
+                          str_detect(city_extraction, "jacksonburgh")  ~ "jacksonboro",
+                          str_detect(city_extraction, "paimboeuf")  ~ "paimboeuf",
+                          str_detect(city_extraction, "spring gardin")  ~ "spring gardin",
+                          str_detect(city_extraction, "springgardin")  ~ "spring gardin",
+                          str_detect(city_extraction, "stewart crossing")  ~ "stewart crossing",
+                          str_detect(city_extraction, "st croix")  ~ "st croix",
+                          str_detect(city_extraction, "tortola")  ~ "tortola",
+                          str_detect(city_extraction, "turners clove")  ~ "turners clove",
+                          str_detect(city_extraction, "berkley county")  ~ "berkley county",
+                          str_detect(city_extraction, "borden town")  ~ "borden town",
+                          str_detect(city_extraction, "west point")  ~ "west point",
+                          str_detect(city_extraction, "vaugirard")  ~ "paris",
+                          str_detect(city_extraction, "newbury port")  ~ "newburyport",
+                          str_detect(city_extraction, "nieuport")  ~ "newport",
+                          str_detect(city_extraction, "new port")  ~ "newport",
+                          str_detect(city_extraction, "madrid")  ~ "madrid",
+                          str_detect(city_extraction, "neworleans") ~ "new orleans",
+                          str_detect(city_extraction, "n orleans") ~ "new orleans",
+                          str_detect(city_extraction, "new-orleans") ~ "new orleans",
+                          str_detect(city_extraction, "ampthill") ~ "ampthill",
+                          str_detect(city_extraction, "leghorn")    ~ "livorno",
+                          str_detect(city_extraction, "bremo")    ~ "bremo",
+                          str_detect(city_extraction, "legn")    ~ "livorno",
+                          str_detect(city_extraction, "orient")    ~ "lorient",
+                          str_detect(city_extraction, "chaillot")    ~ "paris",
+                          str_detect(city_extraction, "nw orleans")    ~ "new orleans",
+                          str_detect(city_extraction, "l orient")    ~ "lorient",
+                          str_detect(city_extraction, "lorient")    ~ "lorient",
+                          str_detect(city_extraction, "havre")    ~ "le havre",
+                          str_detect(city_extraction, "ghent")    ~ "ghent",
+                          str_detect(city_extraction, "helvoetsluys") ~ "hellevoetsluis",
+                          str_detect(city_extraction, "leesburg") ~ "leesburg",
+                          str_detect(city_extraction, "fort mercer") ~ "fort mercer",
+                          str_detect(city_extraction, "montpr") ~ "montpellier",
+                          str_detect(city_extraction, "montper") ~ "montpellier",
+                          str_detect(city_extraction, "montplr") ~ "montpellier",
+                          str_detect(city_extraction, "hudsons river") ~ "hudsons river",
+                          str_detect(city_extraction, "claverack")~ "claverack",
+                          str_detect(city_extraction, "cortlandts manor") ~ "cortlandts manor",
+                          str_detect(city_extraction, "newington green") ~ "newington green",
+                          str_detect(city_extraction, "newingtongreen") ~ "newington green",
+                          str_detect(city_extraction, "friendnewingtongreen") ~ "newington green",
+                          str_detect(city_extraction, "whitemarsh")~ "whitemarsh",
+                          str_detect(city_extraction, "bigg spring")~ "leesburg",
+                          str_detect(city_extraction, "big spring")~ "leesburg",
+                          str_detect(city_extraction, "princeton")~ "princeton",
+                          str_detect(city_extraction, "fishkill")~ "fishkill",
+                          str_detect(city_extraction, "nantes")~ "nantes",
+                          str_detect(city_extraction, "perthamboy")~ "perth amboy",
+                          str_detect(city_extraction, "fort pitt")~ "fort pitt",
+                          str_detect(city_extraction, "harlem")~ "new york",
+                          str_detect(city_extraction, "m vernon")~ "mount vernon",
+                          str_detect(city_extraction, "mt vernon")~ "mount vernon",
+                          str_detect(city_extraction, "elizabeth town")~ "elizabeth town",
+                          str_detect(city_extraction, "elizabethtown")~ "elizabeth town",
+                          str_detect(city_extraction, "elizth town")~ "elizabeth town",
+                          str_detect(city_extraction, "eliza town")~ "elizabeth town",
+                          str_detect(city_extraction, "frederick town")~ "frederick town",
+                          str_detect(city_extraction, "east chester") ~ "east chester",
+                          str_detect(city_extraction, "stony field") ~ "stony field",
+                          str_detect(city_extraction, "richmond hill") ~ "richmond hill",
+                          str_detect(city_extraction, "richd") ~ "richmond",
+                          str_detect(city_extraction, "hampton falls") ~ "hampton falls",
+                          str_detect(city_extraction, "philadelpa")    ~ "philadelphia",
+                          str_detect(city_extraction, "phia")    ~ "philadelphia",
+                          str_detect(city_extraction, "hiladelphia")    ~ "philadelphia",
+                          str_detect(city_extraction, "phyladelphia")  ~ "philadelphia",
+                          str_detect(city_extraction, "philadelp")     ~ "philadelphia",
+                          str_detect(city_extraction, "phildelphia")   ~ "philadelphia",
+                          str_detect(city_extraction, "philadelphie")   ~ "philadelphia",
+                          str_detect(city_extraction, "charlestown")   ~ "charlestown",
+                          str_detect(city_extraction, "washington dc")   ~ "washington",
+                          str_detect(city_extraction, "washington city")   ~ "washington",
+                          str_detect(city_extraction, "petersburg")     ~ "saint petersburg",
+                          str_detect(city_extraction, "st petersbourg") ~ "saint petersburg",
+                          str_detect(city_extraction, "philad.")       ~ "philadelphia",
+                          str_detect(city_extraction, "phila")         ~ "philadelphia",
+                          str_detect(city_extraction, "hiladelphia") ~ "philadelphia",
+                          str_detect(city_extraction, "fredericksbg") ~ "fredericksburg",
+                          str_detect(city_extraction, "fredriksburgh") ~ "fredericksburg",
+                          str_detect(city_extraction, "fredrixbrg") ~ "fredericksburg",
+                          str_detect(city_extraction, "fredericksburg") ~ "fredericksburg",
+                          str_detect(city_extraction, "city of washington") ~ "washington",
+                          str_detect(city_extraction, "philidelphia") ~ "philadelphia",
+                          str_detect(city_extraction, "george-town") ~ "georgetown",
+                          str_detect(city_extraction, "george town") ~ "georgetown",
+                          str_detect(city_extraction, "geo town") ~ "georgetown",
+                          str_detect(city_extraction, "fort constitution") ~ "fort constitution",
+                          str_detect(city_extraction, "fort george") ~ "fort george",
+                          str_detect(city_extraction, "morrissania") ~ "new york",
+                          str_detect(city_extraction, "eorg town") ~ "georgetown",
+                          str_detect(city_extraction, "new ark") ~ "newark",
+                          str_detect(city_extraction, "preakness") ~ "preakness",
+                          str_detect(city_extraction, "winter hill") ~ "winter hill",
+                          str_detect(city_extraction, "prospect hill") ~ "prospect hill",
+                          str_detect(city_extraction, "valentines hill") ~ "valentines hill",
+                          str_detect(city_extraction, "fairy hill") ~ "fairy hill",
+                          str_detect(city_extraction, "rocky hill") ~ "rocky hill",
+                          str_detect(city_extraction, "phills hill") ~ "phills hill",
+                          str_detect(city_extraction, "castle hill") ~ "castle hill",
+                          str_detect(city_extraction, "ashley hill") ~ "ashley hill",
+                          str_detect(city_extraction, "bald hill") ~ "bald hill",
+                          str_detect(city_extraction, "keelers hill") ~ "keelers hill",
+                          str_detect(city_extraction, "hill new milford") ~ "new milford",
+                          str_detect(city_extraction, "spring hill") ~ "spring hill",
+                          str_detect(city_extraction, "malvan hill") ~ "malvan hill",
+                          str_detect(city_extraction, "malvern hill") ~ "malvern hill",
+                          str_detect(city_extraction, "malbern hill") ~ "malvern hill",
+                          str_detect(city_extraction, "quaker hill") ~ "quaker hill",
+                          str_detect(city_extraction, "chesnut hill") ~ "chesnut hill",
+                          str_detect(city_extraction, "bottle hill") ~ "bottle hill",
+                          str_detect(city_extraction, "round hill") ~ "round hill",
+                          str_detect(city_extraction, "rockey hill") ~ "rockey hill",
+                          str_detect(city_extraction, "rocky hill") ~ "rocky hill",
+                          str_detect(city_extraction, "lundrocky hill") ~ "rocky hill",
+                          str_detect(city_extraction, "r hill") ~ "rocky hill",
+                          str_detect(city_extraction, "ocky hill") ~ "rocky hill",
+                          str_detect(city_extraction, "peeks hill") ~ "peeks hill",
+                          str_detect(city_extraction, "baltimore") ~ "baltimore",
+                          str_detect(city_extraction, "hillsborough township") ~ "hillsborough township",
+                          str_detect(city_extraction, "jamaica plain") ~ "jamaica plain",
+                          str_detect(city_extraction, "wmsburg") ~ "williamsburg",
+                          str_detect(city_extraction, "charles town") ~ "charlestown",
+                          str_detect(city_extraction, "new kent") ~ "new kent",
+                          str_detect(city_extraction, "okeepsie") ~ "poughkeepsie",
+                          str_detect(city_extraction, "dobbsferry") ~ "dobbs ferry",
+                          str_detect(city_extraction, "havredegrace") ~ "havre de grace",
+                          str_detect(city_extraction, "fort lee") ~ "fort lee",
+                          str_detect(city_extraction, "frankfort on the main") ~ "frankfurt am main",
+                          str_detect(city_extraction, "bergen county") ~ "bergen county",
+                          str_detect(city_extraction, "fort montgomery") ~ "fort montgomery",
+                          str_detect(city_extraction, "orange town") ~ "orange town",
+                          str_detect(city_extraction, "orangetown") ~ "orange town",
+                          str_detect(city_extraction, "orange county") ~ "orange county",
+                          str_detect(city_extraction, "passaic falls") ~ "passaic falls",
+                          str_detect(city_extraction, "passy") ~ "paris",
+                          str_detect(city_extraction, "londn") ~ "london",
+                          str_detect(city_extraction, "passi") ~ "paris",
+                          str_detect(city_extraction, "reading town") ~ "reading town",
+                          str_detect(city_extraction, "reading furnace") ~ "reading furnace",
+                          str_detect(city_extraction, "rye neck") ~ "rye neck",
+                          str_detect(city_extraction, "brunswic") ~ "brunswick",
+                          str_detect(city_extraction, "princetown") ~ "princetown",
+                          str_detect(city_extraction, "mount vernon") ~ "mount vernon",
+                          str_detect(city_extraction, "morris town") ~ "morristown",
+                          str_detect(city_extraction, "ware church") ~ "ware church",
+                          str_detect(city_extraction, "warwick furnace") ~ "warwick furnace",
+                          str_detect(city_extraction, "warwick bucks") ~ "warwick bucks",
+                          str_detect(city_extraction, "mount washington") ~ "mount washington",
+                          str_detect(city_extraction, "mt washington") ~ "mount washington",
+                          str_detect(city_extraction, "worcester township") ~ "worcester township",
+                          str_detect(city_extraction, "n york") ~ "new york",
+                          str_detect(city_extraction, "york town") ~ "york town",
+                          str_detect(city_extraction, "highlands") ~ "highlands",
+                          str_detect(city_extraction, "new windsor") ~ "new windsor",
+                          str_detect(city_extraction, "new haven") ~ "new haven",
+                          str_detect(city_extraction, "newhaven") ~ "new haven",
+                          str_detect(city_extraction, "new utrecht") ~ "new york city",
+                          str_detect(city_extraction, "plymo") ~ "plymouth",
+                          str_detect(city_extraction, "plym") ~ "plymouth",
+                          str_detect(city_extraction, "plimouth") ~ "plymouth",
+                          str_detect(city_extraction, "piccadilly") ~ "london",
+                          str_detect(city_extraction, "chalsea") ~ "chelsea",
+                          str_detect(city_extraction, "portobacco") ~ "port tobacco",
+                          str_detect(city_extraction, "porttobacco") ~ "port tobacco",
+                          str_detect(city_extraction, "raspberry plain") ~ "leesburg",
+                          str_detect(city_extraction, "rasberry plain") ~ "leesburg",
+                          str_detect(city_extraction, "cheapside") ~ "cheapside",
+                          str_detect(city_extraction, "skipton") ~ "skipton",
+                          str_detect(city_extraction, "gunstonhall") ~ "gunston hall",
+                          str_detect(city_extraction, "gunston hall") ~ "gunston hall",
+                          str_detect(city_extraction, "winchister") ~ "winchester",
+                          str_detect(city_extraction, "craven") ~ "london",
+                          str_detect(city_extraction, "portsmo") ~ "portsmouth",
+                          str_detect(city_extraction, "mount airy") ~ "mount airy",
+                          str_detect(city_extraction, "mountvernon") ~ "mount vernon",
+                          str_detect(city_extraction, "mount vernon") ~ "mount vernon",
+                          str_detect(city_extraction, "mount varnon") ~ "mount vernon",
+                          str_detect(city_extraction, "mt vernon") ~ "mount vernon",
+                          str_detect(city_extraction, "king william") ~ "king william",
+                          str_detect(city_extraction, "alexandria") ~ "alexandria",
+                          str_detect(city_extraction, "alexana") ~ "alexandria",
+                          str_detect(city_extraction, "little england") ~ "little england",
+                          str_detect(city_extraction, "stewarts crossings") ~ "stewarts crossings",
+                          str_detect(city_extraction, "mass bay") ~ "massachusetts bay",
+                          str_detect(city_extraction, "yough river") ~ "yough river",
+                          str_detect(city_extraction, "ashly river") ~ "ashly river",
+                          str_detect(city_extraction, "mattapony river") ~ "mattapony river",
+                          str_detect(city_extraction, "warburton") ~ "warburton",
+                          str_detect(city_extraction, "charlottesville") ~ "charlottesville",
+                          str_detect(city_extraction, "braintre") ~ "braintree",
+                          str_detect(city_extraction, "saratoga") ~ "saratoga",
+                          str_detect(city_extraction, "tionderoga") ~ "tionderoga",
+                          str_detect(city_extraction, "tyonderoga") ~ "tionderoga",
+                          str_detect(city_extraction, "ticonderoga") ~ "tionderoga",
+                          str_detect(city_extraction, "amstdm") ~ "amsterdam",
+                          str_detect(city_extraction, "golden square") ~ "london",
+                          str_detect(city_extraction, "london") ~ "london",
+                          str_detect(city_extraction, "harford town") ~ "harford town",
+                          str_detect(city_extraction, "campridge") ~ "cambridge",
+                          str_detect(city_extraction, "cambreg") ~ "cambridge",
+                          str_detect(city_extraction, "water town") ~ "watertown",
+                          str_detect(city_extraction, "pecks kills")~ "peekskill",
+                          str_detect(city_extraction, "peckskill")  ~ "peekskill",
+                          str_detect(city_extraction, "peekskill")  ~ "peekskill",
+                          str_detect(city_extraction, "peeks kill") ~ "peekskill",
+                          str_detect(city_extraction, "peaks kiln") ~ "peekskill",
+                          str_detect(city_extraction, "philipsburg")~ "philipsburg",
+                          str_detect(city_extraction, "bethelem")~ "bethlehem",
+                          str_detect(city_extraction, "heckenseck") ~ "heckenseck",
+                          str_detect(city_extraction, "hackensack") ~ "hackensack",
+                          str_detect(city_extraction, "falls of delaware") ~ "delaware falls",
+                          str_detect(city_extraction, "falls township") ~ "falls township",
+                          str_detect(city_extraction, "turin") ~ "turin",
+                          str_detect(city_extraction, "sussex") ~ "sussex",
+                          str_detect(city_extraction, "germantown") ~ "philadelphia",
+                          str_detect(city_extraction, "bucks county") ~ "bucks county",
+                          str_detect(city_extraction, "amwell") ~ "amwell",
+                          str_detect(city_extraction, "corriels ferry") ~ "corriels ferry",
+                          str_detect(city_extraction, "keiths") ~ "keiths",
+                          str_detect(city_extraction, "versailles") ~ "versailles",
+                          str_detect(city_extraction, "dijon") ~ "dijon",
+                          str_detect(city_extraction, "paramus") ~ "paramus",
+                          str_detect(city_extraction, "new town") ~ "new town",
+                          str_detect(city_extraction, "haddonfield") ~ "haddonfield",
+                          str_detect(city_extraction, "grafton street") ~ "dublin",
+                          str_detect(city_extraction, "montego bay") ~ "montego bay",
+                          str_detect(city_extraction, "oyster ponds") ~ "oyster pond",
+                          str_detect(city_extraction, "baskenridge") ~ "basking ridge",
+                          str_detect(city_extraction, "white plains") ~ "white plains",
+                          str_detect(city_extraction, "whiteplains") ~ "white plains",
+                          str_detect(city_extraction, "rouen") ~ "rouen",
+                          str_detect(city_extraction, "pownalborough") ~ "pownalborough",
+                          str_detect(city_extraction, "frenchmans bay") ~ "frenchmans bay",
+                          str_detect(city_extraction, "fayette ville") ~ "fayette ville",
+                          str_detect(city_extraction, "tarboh") ~ "tarboh",
+                          str_detect(city_extraction, "mountpleasant") ~ "mount pleasant",
+                          str_detect(city_extraction, "mount plesant") ~ "mount pleasant",
+                          str_detect(city_extraction, "algiers") ~ "algiers",
+                          str_detect(city_extraction, "eppington") ~ "eppington",
+                          str_detect(city_extraction, "springhouse") ~ "spring house",
+                          str_detect(city_extraction, "haie") ~ "the hague",
+                          str_detect(city_extraction, "bush hill") ~ "philadelphia",
+                          str_detect(city_extraction, "brussells") ~ "brussells",
+                          str_detect(city_extraction, "versills") ~ "versailles",
+                          str_detect(city_extraction, "avignon") ~ "avignon",
+                          str_detect(city_extraction, "dunkerque") ~ "dunkerque",
+                          str_detect(city_extraction, "castelnaudarry") ~ "castelnaudarry",
+                          str_detect(city_extraction, "cheam") ~ "london",
+                          str_detect(city_extraction, "londres") ~ "london",
+                          str_detect(city_extraction, "bridgeTown barbadoes") ~ "bridgeTown barbadoes",
+                          str_detect(city_extraction, "sannois") ~ "sannois",
+                          str_detect(city_extraction, "maidenhead") ~ "maidenhead",
+                          str_detect(city_extraction, "reedyisland") ~ "reedy island",
+                          str_detect(city_extraction, "stenton") ~ "stenton",
+                          str_detect(city_extraction, "quebec") ~ "quebec",
+                          str_detect(city_extraction, "lond") ~ "london",
+                          str_detect(city_extraction, "eliz town") ~ "elizabeth town",
+                          str_detect(city_extraction, "coldengham") ~ "coldengham",
+                          str_detect(city_extraction, "coldenghame") ~ "coldengham",
+                          str_detect(city_extraction, "st germain") ~ "saint germain",
+                          str_detect(city_extraction, "lincolnsinnfields") ~ "london",
+                          str_detect(city_extraction, "wills creek") ~ "wills creek",
+                          str_detect(city_extraction, "fort dunwiddie") ~ "fort dunwiddie",
+                          str_detect(city_extraction, "williamsburgh") ~ "williamsburg",
+                          str_detect(city_extraction, "williamsbg") ~ "williamsburg",
+                          str_detect(city_extraction, "wmburgh") ~ "williamsburg",
+                          str_detect(city_extraction, "williamsburgh") ~ "williamsburg",
+                          str_detect(city_extraction, "williamsbgh") ~ "williamsburg",
+                          str_detect(city_extraction, "allenstown") ~ "allen's town",
+                          str_detect(city_extraction, "dogues neck") ~ "dogues neck",
+                          str_detect(city_extraction, "maidstone") ~ "maidstone",
+                          str_detect(city_extraction, "fort loudoun") ~ "fort loudoun",
+                          str_detect(city_extraction, "ort loudoun") ~ "fort loudoun",
+                          str_detect(city_extraction, "lewisfort loudoun") ~ "fort loudoun",
+                          str_detect(city_extraction, "fort fredrick") ~ "fort frederick",
+                          str_detect(city_extraction, "richmd county") ~ "richmond county",
+                          str_detect(city_extraction, "bladensbg") ~ "bladensburg",
+                          str_detect(city_extraction, "carlile") ~ "carlisle",
+                          str_detect(city_extraction, "raystown") ~ "raystown",
+                          str_detect(city_extraction, "raestown") ~ "raystown",
+                          str_detect(city_extraction, "raes town") ~ "raystown",
+                          str_detect(city_extraction, "rays town") ~ "raystown",
+                          str_detect(city_extraction, "reas town") ~ "raystown",
+                          str_detect(city_extraction, "pensyla") ~ "pennsylvania",
+                          str_detect(city_extraction, "pensylva") ~ "pennsylvania",
+                          str_detect(city_extraction, "cresaps") ~ "cresap's",
+                          str_detect(city_extraction, "montreall") ~ "montreal",
+                          str_detect(city_extraction, "wellingborough") ~ "wellingborough",
+                          str_detect(city_extraction, "fairhill") ~ "fairhill",
+                          str_detect(city_extraction, "wanstead") ~ "london",
+                          str_detect(city_extraction, "bulskin") ~ "bullskin",
+                          str_detect(city_extraction, "bullskin") ~ "bullskin",
+                          str_detect(city_extraction, "bulskn") ~ "bullskin",
+                          str_detect(city_extraction, "yorke") ~ "york",
+                          str_detect(city_extraction, "fort adams") ~ "fort adams",
+                          str_detect(city_extraction, "fort augusta") ~ "fort augusta",
+                          str_detect(city_extraction, "antigua") ~ "antigua",
+                          str_detect(city_extraction, "newcastle tyne") ~ "newcastle on tyne",
+                          str_detect(city_extraction, "mt airy") ~ "mount airy",
+                          str_detect(first_sentence, "scituate") ~ "scituate",
+
+
                           .default = NA_character_))
 
 # save results
 saveRDS(letter_ss, file = "data/interim/geo_extraction.rds")
 
-# if city name is still missing, try to look it up in city_search list of cities
+# if city name is still missing, try to look it up in unique_cities list of cities
 
 num_cores <- parallel::detectCores()
 cat("Number of CPU cores:", num_cores, "\n")
@@ -672,26 +742,23 @@ cat("Number of CPU cores:", num_cores, "\n")
 # Set up the multisession plan
 plan(multisession, workers = num_cores - 1)
 
-print("Start model fit")
+print("Start")
 tic <- Sys.time()
 
 # match city names in a case-insensitive way and as whole words
-pattern  <- paste0("(?i)(", paste0(city_search$city, collapse = "\\b|\\b"), "\\b)")
-#pattern <- str_replace_all(pattern, fixed("|"), "\\|")  # Escape | in the pattern
+pattern  <- paste0("(?i)(", paste0(unique_cities$city, collapse = "\\b|\\b"), "\\b)")
 
 # Define the function to extract city based on the condition
-extract_city <- function(first, city) {
-  city[is.na(city)] <- str_extract(first[is.na(city)], pattern)
+extract_city <- function(city_extraction, city) {
+  city[is.na(city)] <- str_extract(city_extraction[is.na(city)], pattern)
   return(city)
 }
 
-letter_selection <- letter_ss %>% slice(1:5000)
-
-# Use furrr to parallelize the mutate operation
-letter_selection <- letter_selection %>%
+# Use furrr to parallelise the mutate operation
+letter_ss <- letter_ss %>%
   mutate(
     city = future_map2(
-      .x = first,
+      .x = city_extraction,
       .y = city,
       .f = extract_city,
       .progress = TRUE
@@ -704,204 +771,215 @@ print(paste0("Matching the city name took ", round(toc - tic, digits = 2)))
 # Explicitly stop parallel processing
 plan("sequential")
 
+# unlist city column
+letter_ss <- letter_ss %>%
+  mutate(city = sapply(city, function(lst) paste(lst, collapse = ",")))
 
-# save results again
+# save results
 saveRDS(letter_ss, file = "data/interim/geo_extraction.rds")
+letter_ss <- readRDS("data/interim/geo_extraction.rds") # city only
 
 ## B) Extract us-state name ----
 
+#In 1835, there were 24 U.S. states
 # looking for both state abbreviations and full state names
-state_names <- c("alabama", "alaska", "arizona", "arkansas", "california",
-                 "colorado", "connecticut", "delaware", "florida", "georgia",
-                 "hawaii", "idaho", "illinois", "indiana", "iowa",
-                 "kansas", "kentucky", "louisiana", "maine", "maryland",
-                 "massachusetts", "michigan", "minnesota", "mississippi",
-                 "missouri", "montana", "nebraska", "nevada", "new hampshire",
-                 "new jersey", "new mexico", "new york", "north carolina",
-                 "north dakota", "ohio", "oklahoma", "oregon", "pennsylvania",
-                 "rhode island", "south carolina", "south dakota", "tennessee",
-                 "texas", "utah", "vermont", "virginia", "washington",
-                 "west virginia", "wisconsin", "wyoming")
+state_names <- c("delaware", "pennsylvania", "new jersey", "georgia", "connecticut",
+                 "massachusetts", "maryland", "south carolina", "new hampshire",
+                 "virginia", "new york", "north carolina", "rhode island", "vermont",
+                 "kentucky", "tennessee", "ohio", "louisiana", "indiana",
+                 "mississippi", "illinois", "alabama", "maine", "missouri",
+                 "district of columbia")
 
-# Define state abbreviations
-state_abbreviations <- c("ak", "az", "ar", "co", "ct", "fl", "ga",
-                         "hi", "id", "il", "ia", "ks", "ky", "la", "md",
-                         "ma", "mi", "mn", "ms", "mo", "mt", "ne", "nv", "nh", "nj",
-                         "nm", "ny", "nc", "nd", "oh", "pa", "ri", "sc",
-                         "sd", "tn", "tx", "ut", "vt", "va", "wa", "wv", "wi", "wy")
+state_names <- sort(state_names)
+
+state_abbreviations <- c(" al ", " ct ", " de ", " ga ", " il ", " va ",
+                         " sc ", " ky ", " la ", " md ", " ma ", " mi ", " ms ",
+                         " mo",  " nh ", " nj ", " ny ", " nc ", " oh ", " pa ",
+                         " ri ", " tn ", " dc ")
+state_abbreviations <- sort(state_abbreviations)
 
 # Define common abbreviations using 3 or 4 characters
-state_abbreviations_common_3_4 <- c("ala", "alas", "ari", "ark", "cali", "colo", "conn", "del",
-                                    "fla", "geo", "haw", "ida", "ill", "indi", "iowa", "kans",
-                                    "kent", "lou", "main", "mary", "mass", "mich", "minn",
-                                    "miss", "mouri", "mont", "neb", "neva", "hamp", "jers",
-                                    "mexi", "york", "caro", "dako", "ohio", "okla", "oreg",
-                                    "penn", "rhode", "caro", "dako", "tenn", "texa", "utah",
-                                    "verm", "virg", "wash", "west", "wisc", "wyo")
+state_abbreviations_common_3_4 <- c(" ala " , " conn ", " del " ," kent ",
+                                    " geo " , " ill  ", " indi "," lou ",
+                                    " main ", " mary ", " mass ",
+                                    " hamp ", " jers ", " caro ", " ohio ",
+                                    " penn ", " tenn ", " verm ", " virg ")
+state_abbreviations_common_3_4 <- sort(state_abbreviations_common_3_4)
 
-comprehensive_pattern <- paste0("(?i)(", paste0(state_abbreviations,
-                                                state_abbreviations_common_3_4,
-                                                state_names,
-                                                collapse = "\\b|\\b"), "\\b)")
+state_patterns <- paste0("(?i)\\b(", paste0(c(state_abbreviations,
+                                              state_abbreviations_common_3_4,
+                                              state_names), collapse = "|"), ")\\b")
 
-# Extract state information from the letter data
-letter_ss$state <- str_extract(letter_ss$first, comprehensive_pattern)
+# Extract state information from city_extraction
+letter_ss$state <- str_extract(letter_ss$city_extraction, state_patterns)
 
-unique(letter_ss$state)
+# Extract state information directly from first_sentence if state is still NA
+letter_ss$state <- ifelse(is.na(letter_ss$state),
+                          str_extract(letter_ss$first_sentence, state_patterns),
+                          letter_ss$state)
+
+# replace full spelled-out state names with their abbreviations
+letter_ss <- letter_ss %>%
+  mutate(state = case_when(
+    state == "alabama"        ~ str_replace(state, "alabama", "al"),
+    state == "connecticut"    ~ str_replace(state, "connecticut", "ct"),
+    state == "delaware"       ~ str_replace(state, "delaware", "de"),
+    state == "georgia"        ~ str_replace(state, "georgia", "ga"),
+    state == "illinois"       ~ str_replace(state, "illinois", "il"),
+    state == "indiana"        ~ str_replace(state, "indiana", "in"),
+    state == "kentucky"       ~ str_replace(state, "kentucky", "ky"),
+    state == "louisiana"      ~ str_replace(state, "louisiana", "la"),
+    state == "maine"          ~ str_replace(state, "maine", "me"),
+    state == "maryland"       ~ str_replace(state, "maryland", "md"),
+    state == "massachusetts"  ~ str_replace(state, "massachusetts", "ma"),
+    state == "mississippi"    ~ str_replace(state, "mississippi", "ms"),
+    state == "missouri"       ~ str_replace(state, "missouri", "mo"),
+    state == "new hampshire"  ~ str_replace(state, "new hampshire", "nh"),
+    state == "new jersey"     ~ str_replace(state, "new jersey", "nj"),
+    state == "new york"       ~ str_replace(state, "new york", "ny"),
+    state == "north carolina" ~ str_replace(state, "north carolina", "nc"),
+    state == "ohio"           ~ str_replace(state, "ohio", "oh"),
+    state == "pennsylvania"   ~ str_replace(state, "pennsylvania", "pa"),
+    state == "rhode island"   ~ str_replace(state, "rhode island", "ri"),
+    state == "south carolina" ~ str_replace(state, "south carolina", "sc"),
+    state == "tennessee"      ~ str_replace(state, "tennessee", "tn"),
+    state == "vermont"        ~ str_replace(state, "vermont", "vt"),
+    state == "virginia"       ~ str_replace(state, "virginia", "va"),
+    state == "washington"     ~ str_replace(state, "washington", "dc"),
+    state == "district of columbia" ~ str_replace(state, "district of columbia", "dc"),
+    TRUE ~ state  # Keep the original value if not found in the mapping
+  ))
 
 # Define the state mapping rules
 state_mapping <- case_when(
-  str_detect(letter_ss$first," mass") ~ "MA",
-  str_detect(letter_ss$first,"newyork") ~ "NY",
-  str_detect(letter_ss$first,"n york") ~ "NY",
-  str_detect(letter_ss$first,"penn") ~ "PA",
-  str_detect(letter_ss$first,"chester pa") ~ "PA",
-  str_detect(letter_ss$first,"county pa") ~ "PA",
-  str_detect(letter_ss$first,"chesnut hill pa") ~ "PA",
-  str_detect(letter_ss$first,"dc") ~ "DC",
-  str_detect(letter_ss$first,"maryland") ~ "MD",
-  str_detect(letter_ss$first,"havre de grace") ~ "MD",
-  str_detect(letter_ss$first,"george town potomac") ~ "DC",
-  str_detect(letter_ss$first,"george town columa") ~ "DC",
-  str_detect(letter_ss$first,"george town columbia") ~ "DC",
-  str_detect(letter_ss$first,"west point") ~ "NY",
-  str_detect(letter_ss$first,"alabama") ~ "AL",
-  str_detect(letter_ss$first,"alaska") ~"AK",
-  str_detect(letter_ss$first,"arizona") ~"AZ",
-  str_detect(letter_ss$first,"arkansas") ~"AR",
-  str_detect(letter_ss$first,"american samoa") ~"AS",
-  str_detect(letter_ss$first,"california") ~"CA",
-  str_detect(letter_ss$first,"colorado") ~"CO",
-  str_detect(letter_ss$first,"washington co") ~"CO",
-  str_detect(letter_ss$first,"cola") ~"CO",
-  str_detect(letter_ss$first,"coa") ~"CO",
-  str_detect(letter_ss$first,"coo") ~"CO",
-  str_detect(letter_ss$first,"george town co") ~"CO",
-  str_detect(letter_ss$first,"connecticut") ~"CT",
-  str_detect(letter_ss$first,"conn") ~"CT",
-  str_detect(letter_ss$first,"danbury conn") ~"CT",
-  str_detect(letter_ss$first,"delaware") ~"DE",
-  str_detect(letter_ss$first,"dover del") ~"DE",
-  str_detect(letter_ss$first,"district of columbia") ~"DC",
-  str_detect(letter_ss$first,"columbia") ~"DC",
-  str_detect(letter_ss$first,"florida") ~"FL",
-  str_detect(letter_ss$first,"georgia") ~"GA",
-  str_detect(letter_ss$first,"guam") ~"GU",
-  str_detect(letter_ss$first,"hawaii") ~"HI",
-  str_detect(letter_ss$first,"idaho") ~"ID",
-  str_detect(letter_ss$first,"illinois") ~"IL",
-  str_detect(letter_ss$first,"alexandria") ~ "VA",
-  str_detect(letter_ss$first,"salem") ~ "VA",
-  str_detect(letter_ss$first,"indiana") ~"IN",
-  str_detect(letter_ss$first,"iowa") ~"IA",
-  str_detect(letter_ss$first,"kansas") ~"KS",
-  str_detect(letter_ss$first,"kentucky") ~"KY",
-  str_detect(letter_ss$first,"louisiana") ~"LA",
-  str_detect(letter_ss$first,"maine") ~"ME",
-  str_detect(letter_ss$first,"maryland") ~"MD",
-  str_detect(letter_ss$first,"massachusetts") ~"MA",
-  str_detect(letter_ss$first,"massts") ~"MA",
-  str_detect(letter_ss$first,"braintree") ~"MA",
-  str_detect(letter_ss$first,"jacksonboro") ~"SC",
-  str_detect(letter_ss$first,"london") ~"-",
-  str_detect(letter_ss$first,"paris") ~ "-",
-  str_detect(letter_ss$city, "philadelphia") ~ "PA",
-  str_detect(letter_ss$first,"mount vernon") ~"VA",
-  str_detect(letter_ss$first,"michigan") ~"MI",
-  str_detect(letter_ss$first,"minnesota") ~"MN",
-  str_detect(letter_ss$first,"mississippi") ~"MS",
-  str_detect(letter_ss$first,"missouri") ~"MO",
-  str_detect(letter_ss$first,"montana") ~"MT",
-  str_detect(letter_ss$first,"nebraska") ~"NE",
-  str_detect(letter_ss$first,"nevada") ~"NV",
-  str_detect(letter_ss$first,"new hampshire") ~"NH",
-  str_detect(letter_ss$first,"newhamshire") ~"NH",
-  str_detect(letter_ss$first,"hampshire") ~"NH",
-  str_detect(letter_ss$first,"n hamps") ~"NH",
-  str_detect(letter_ss$first,"charlestown nh") ~"NH",
-  str_detect(letter_ss$first,"durham nh") ~"NH",
-  str_detect(letter_ss$first,"exeter nh") ~"NH",
-  str_detect(letter_ss$first,"new hampshire") ~"NH",
-  str_detect(letter_ss$first,"newhampshire") ~"NH",
-  str_detect(letter_ss$first,"new hampshe") ~"NH",
-  str_detect(letter_ss$first,"new jersey") ~"NJ",
-  str_detect(letter_ss$first,"n jersy") ~"NJ",
-  str_detect(letter_ss$first,"n jersey") ~"NJ",
-  str_detect(letter_ss$first,"new mexico") ~"NM",
-  str_detect(letter_ss$first,"new york") ~"NY",
-  str_detect(letter_ss$city ,"new york") ~"NY",
-  str_detect(letter_ss$first,"state of n york") ~"NY",
-  str_detect(letter_ss$first,"washington ny") ~"NY",
-  str_detect(letter_ss$first,"washington nyst") ~"NY",
-  str_detect(letter_ss$first,"north carolina") ~"NC",
-  str_detect(letter_ss$first,"no carolina") ~"NC",
-  str_detect(letter_ss$first,"north carolinia") ~"NC",
-  str_detect(letter_ss$first,"northcarolina") ~"NC",
-  str_detect(letter_ss$first,"n carolina") ~"NC",
-  str_detect(letter_ss$first,"ncar") ~"NC",
-  str_detect(letter_ss$first,"edenton nc") ~"NC",
-  str_detect(letter_ss$first,"mount airy") ~ "NC",
-  str_detect(letter_ss$first,"north dakota") ~"ND",
-  str_detect(letter_ss$first,"northern mariana islands") ~"MP",
-  str_detect(letter_ss$first,"ohio") ~"OH",
-  str_detect(letter_ss$first,"oklahoma") ~"OK",
-  str_detect(letter_ss$first,"oregon") ~"OR",
-  str_detect(letter_ss$first,"pennsylvania") ~"PA",
-  str_detect(letter_ss$first,"pensilvania") ~"PA",
-  str_detect(letter_ss$first,"pensylvania") ~"PA",
-  str_detect(letter_ss$first,"penna") ~"PA",
-  str_detect(letter_ss$first,"pensylva") ~"PA",
-  str_detect(letter_ss$first,"bristol pa") ~"PA",
-  str_detect(letter_ss$first,"carlisle pa") ~"PA",
-  str_detect(letter_ss$first,"doylestown pa") ~"PA",
-  str_detect(letter_ss$first,"goshen pa") ~"PA",
-  str_detect(letter_ss$first,"easton pa") ~"PA",
-  str_detect(letter_ss$first,"at the forks of delaware") ~"PA",
-  str_detect(letter_ss$first,"puerto rico") ~"PR",
-  str_detect(letter_ss$first,"rhode island") ~"RI",
-  str_detect(letter_ss$first,"state rhode islandc") ~"RI",
-  str_detect(letter_ss$first,"rhode isld") ~"RI",
-  str_detect(letter_ss$first,"rhodeisland") ~"RI",
-  str_detect(letter_ss$first,"east greenwich ri") ~"RI",
-  str_detect(letter_ss$first,"east greenwich r island") ~"RI",
-  str_detect(letter_ss$first,"tiverton ri") ~"RI",
-  str_detect(letter_ss$first,"bristol ri") ~"RI",
-  str_detect(letter_ss$first,"south carolina") ~"SC",
-  str_detect(letter_ss$first,"so carolina") ~"SC",
-  str_detect(letter_ss$first,"camden sc") ~"SC",
-  str_detect(letter_ss$first,"charleston sc") ~"SC",
-  str_detect(letter_ss$first,"south dakota") ~"SD",
-  str_detect(letter_ss$first,"tennessee") ~"TN",
-  str_detect(letter_ss$first,"texas") ~"TX",
-  str_detect(letter_ss$first,"trust territories") ~"TT",
-  str_detect(letter_ss$first,"utah") ~"UT",
-  str_detect(letter_ss$first,"vermont") ~"VT",
-  str_detect(letter_ss$first,"virginia") ~ "VA",
-  str_detect(letter_ss$first,"virga") ~ "VA",
-  str_detect(letter_ss$first,"chesterfield co ho") ~ "VA",
-  str_detect(letter_ss$first,"chesterfield ct hs") ~ "VA",
-  str_detect(letter_ss$first,"chesterfield ct ho") ~ "VA",
-  str_detect(letter_ss$first,"chesterfield ct") ~ "VA",
-  str_detect(letter_ss$first,"chesterfield court ho") ~ "VA",
-  str_detect(letter_ss$first,"chesterfield court house") ~ "VA",
-  str_detect(letter_ss$first,"chesterfield co") ~ "VA",
-  str_detect(letter_ss$first,"gunstonhall") ~ "VA",
-  str_detect(letter_ss$first,"gunston hall") ~ "VA",
-  str_detect(letter_ss$first,"dumfries va") ~ "VA",
-  str_detect(letter_ss$first,"king william") ~ "VA",
-  str_detect(letter_ss$first,"virgin islands") ~"VI",
-  str_detect(letter_ss$first,"washington") ~"WA",
-  str_detect(letter_ss$first,"west virginia") ~"WV",
-  str_detect(letter_ss$first,"wisconsin") ~"WI",
-  str_detect(letter_ss$first,"wyoming") ~"WY",
-  str_detect(letter_ss$first," va") ~ "VA",
-  str_detect(letter_ss$first,"hiladelphia")  ~ "PA",
-  str_detect(letter_ss$first,"philadelphia")  ~ "PA",
-  str_detect(letter_ss$first,"providence")  ~ "RI",
-  str_detect(letter_ss$first,"boston")  ~ "MA",
-  str_detect(letter_ss$first,"baltimore")  ~ "MD",
-  str_detect(letter_ss$first,"monticello")  ~ "VA",
-  str_detect(letter_ss$first,"wilmington d")  ~ "DE",
+  str_detect(letter_ss$first_sentence," mass") ~ "ma",
+  str_detect(letter_ss$first_sentence,"newyork") ~ "ny",
+  str_detect(letter_ss$first_sentence,"n york") ~ "ny",
+  str_detect(letter_ss$first_sentence,"penn") ~ "pa",
+  str_detect(letter_ss$first_sentence,"chester pa") ~ "pa",
+  str_detect(letter_ss$first_sentence,"county pa") ~ "pa",
+  str_detect(letter_ss$first_sentence,"chesnut hill pa") ~ "pa",
+  str_detect(letter_ss$first_sentence,"dc") ~ "dc",
+  str_detect(letter_ss$first_sentence,"maryland") ~ "md",
+  str_detect(letter_ss$first_sentence,"havre de grace") ~ "md",
+  str_detect(letter_ss$first_sentence,"george town potomac") ~ "dc",
+  str_detect(letter_ss$first_sentence,"george town columa") ~ "dc",
+  str_detect(letter_ss$first_sentence,"george town columbia") ~ "dc",
+  str_detect(letter_ss$first_sentence,"west point") ~ "ny",
+  str_detect(letter_ss$first_sentence,"alabama") ~ "al",
+  str_detect(letter_ss$first_sentence,"washington") ~"dc",
+  str_detect(letter_ss$first_sentence,"washington co") ~"co",
+  str_detect(letter_ss$first_sentence,"george town co") ~"co",
+  str_detect(letter_ss$first_sentence,"connecticut") ~"ct",
+  str_detect(letter_ss$first_sentence,"conn") ~"ct",
+  str_detect(letter_ss$first_sentence,"danbury conn") ~"ct",
+  str_detect(letter_ss$first_sentence,"delaware") ~"de",
+  str_detect(letter_ss$first_sentence,"dover del") ~"de",
+
+  str_detect(letter_ss$first_sentence,"columbia") ~"dc",
+  str_detect(letter_ss$first_sentence,"georgia") ~"ga",
+  str_detect(letter_ss$first_sentence,"guam") ~"gu",
+  str_detect(letter_ss$first_sentence,"illinois") ~"il",
+  str_detect(letter_ss$first_sentence,"alexandria") ~ "va",
+  str_detect(letter_ss$first_sentence,"salem") ~ "va",
+  str_detect(letter_ss$first_sentence,"indiana") ~"in",
+  str_detect(letter_ss$first_sentence,"kentucky") ~"ky",
+  str_detect(letter_ss$first_sentence,"louisiana") ~"la",
+  str_detect(letter_ss$first_sentence,"maine") ~"me",
+  str_detect(letter_ss$first_sentence,"maryland") ~"md",
+  str_detect(letter_ss$first_sentence,"massachusetts") ~"ma",
+  str_detect(letter_ss$first_sentence,"massts") ~"ma",
+  str_detect(letter_ss$first_sentence,"braintree") ~"ma",
+  str_detect(letter_ss$first_sentence,"jacksonboro") ~"sc",
+  str_detect(letter_ss$first_sentence,"mount vernon") ~"va",
+  str_detect(letter_ss$first_sentence,"mississippi") ~"ms",
+  str_detect(letter_ss$first_sentence,"missouri") ~"mo",
+  str_detect(letter_ss$first_sentence,"new hampshire") ~"nh",
+  str_detect(letter_ss$first_sentence,"newhamshire") ~"nh",
+  str_detect(letter_ss$first_sentence,"hampshire") ~"nh",
+  str_detect(letter_ss$first_sentence,"n hamps") ~"nh",
+  str_detect(letter_ss$first_sentence,"charlestown nh") ~"nh",
+  str_detect(letter_ss$first_sentence,"durham nh") ~"nh",
+  str_detect(letter_ss$first_sentence,"exeter nh") ~"nh",
+  str_detect(letter_ss$first_sentence,"new hampshire") ~"nh",
+  str_detect(letter_ss$first_sentence,"newhampshire") ~"nh",
+  str_detect(letter_ss$first_sentence,"new hampshe") ~"nh",
+  str_detect(letter_ss$first_sentence,"new jersey") ~"nj",
+  str_detect(letter_ss$first_sentence,"n jersy") ~"nj",
+  str_detect(letter_ss$first_sentence,"n jersey") ~"nj",
+  str_detect(letter_ss$first_sentence,"new york") ~"ny",
+  str_detect(letter_ss$first_sentence,"state of n york") ~"ny",
+  str_detect(letter_ss$first_sentence,"washington ny") ~"ny",
+  str_detect(letter_ss$first_sentence,"washington nyst") ~"ny",
+  str_detect(letter_ss$first_sentence,"north carolina") ~"nc",
+  str_detect(letter_ss$first_sentence,"no carolina") ~"nc",
+  str_detect(letter_ss$first_sentence,"north carolinia") ~"nc",
+  str_detect(letter_ss$first_sentence,"northcarolina") ~"nc",
+  str_detect(letter_ss$first_sentence,"n carolina") ~"nc",
+  str_detect(letter_ss$first_sentence,"ncar") ~"nc",
+  str_detect(letter_ss$first_sentence,"edenton nc") ~"nc",
+  str_detect(letter_ss$first_sentence,"mount airy") ~ "nc",
+  str_detect(letter_ss$first_sentence,"north dakota") ~"nd",
+  str_detect(letter_ss$first_sentence,"northern mariana islands") ~"mp",
+  str_detect(letter_ss$first_sentence,"ohio") ~"oh",
+  str_detect(letter_ss$first_sentence,"oklahoma") ~"ok",
+  str_detect(letter_ss$first_sentence,"oregon") ~"or",
+  str_detect(letter_ss$first_sentence,"pennsylvania") ~"pa",
+  str_detect(letter_ss$first_sentence,"pensilvania") ~"pa",
+  str_detect(letter_ss$first_sentence,"pensylvania") ~"pa",
+  str_detect(letter_ss$first_sentence,"penna") ~"pa",
+  str_detect(letter_ss$first_sentence,"pensylva") ~"pa",
+  str_detect(letter_ss$first_sentence,"bristol pa") ~"pa",
+  str_detect(letter_ss$first_sentence,"carlisle pa") ~"pa",
+  str_detect(letter_ss$first_sentence,"doylestown pa") ~"pa",
+  str_detect(letter_ss$first_sentence,"goshen pa") ~"pa",
+  str_detect(letter_ss$first_sentence,"easton pa") ~"pa",
+  str_detect(letter_ss$first_sentence,"at the forks of delaware") ~"pa",
+  str_detect(letter_ss$first_sentence,"puerto rico") ~"pr",
+  str_detect(letter_ss$first_sentence,"rhode island") ~"ri",
+  str_detect(letter_ss$first_sentence,"state rhode islandc") ~"ri",
+  str_detect(letter_ss$first_sentence,"rhode isld") ~"ri",
+  str_detect(letter_ss$first_sentence,"rhodeisland") ~"ri",
+  str_detect(letter_ss$first_sentence,"east greenwich ri") ~"ri",
+  str_detect(letter_ss$first_sentence,"east greenwich r island") ~"ri",
+  str_detect(letter_ss$first_sentence,"tiverton ri") ~"ri",
+  str_detect(letter_ss$first_sentence,"bristol ri") ~"ri",
+  str_detect(letter_ss$first_sentence,"south carolina") ~"sc",
+  str_detect(letter_ss$first_sentence,"so carolina") ~"sc",
+  str_detect(letter_ss$first_sentence,"camden sc") ~"sc",
+  str_detect(letter_ss$first_sentence,"charleston sc") ~"sc",
+  str_detect(letter_ss$first_sentence,"tennessee") ~"tn",
+  str_detect(letter_ss$first_sentence,"trust territories") ~"tt",
+  str_detect(letter_ss$first_sentence,"vermont") ~"vt",
+  str_detect(letter_ss$first_sentence,"virginia") ~ "va",
+  str_detect(letter_ss$first_sentence,"virga") ~ "va",
+  str_detect(letter_ss$first_sentence,"chesterfield co ho") ~ "va",
+  str_detect(letter_ss$first_sentence,"chesterfield ct hs") ~ "va",
+  str_detect(letter_ss$first_sentence,"chesterfield ct ho") ~ "va",
+  str_detect(letter_ss$first_sentence,"chesterfield ct") ~ "va",
+  str_detect(letter_ss$first_sentence,"chesterfield court ho") ~ "va",
+  str_detect(letter_ss$first_sentence,"chesterfield court house") ~ "va",
+  str_detect(letter_ss$first_sentence,"chesterfield co") ~ "va",
+  str_detect(letter_ss$first_sentence,"gunstonhall") ~ "va",
+  str_detect(letter_ss$first_sentence,"gunston hall") ~ "va",
+  str_detect(letter_ss$first_sentence,"dumfries va") ~ "va",
+  str_detect(letter_ss$first_sentence,"king william") ~ "va",
+  str_detect(letter_ss$first_sentence,"virgin islands") ~"vi",
+  str_detect(letter_ss$first_sentence,"hiladelphia")  ~ "pa",
+  str_detect(letter_ss$first_sentence,"philadelphia")  ~ "pa",
+  str_detect(letter_ss$first_sentence,"providence")  ~ "ri",
+  str_detect(letter_ss$first_sentence,"boston")  ~ "ma",
+  str_detect(letter_ss$first_sentence,"baltimore") ~ "md",
+  str_detect(letter_ss$first_sentence,"monticello")  ~ "va",
+  str_detect(letter_ss$first_sentence,"wilmington d")  ~ "de",
+
+  str_detect(letter_ss$city ,"coldengham") ~"ny",
+  str_detect(letter_ss$city ,"nashville") ~"tn",
+  str_detect(letter_ss$city ,"natchez") ~"ms",
+  str_detect(letter_ss$city ,"bremo") ~"va",
+  str_detect(letter_ss$city ,"new york") ~"ny",
+  str_detect(letter_ss$city ,"new orleans") ~"la",
+  str_detect(letter_ss$city, "philadelphia") ~ "pa",
   TRUE ~ NA_character_
 )
 
@@ -911,94 +989,7 @@ letter_ss$state <- case_when(
   TRUE ~ state_mapping
 )
 
-# Filter out non-duplicate cities from the cities-before-1825 dataset; for these
-# cities we can unambiguously assign a state
-non_duplicate_cities <- cities %>% group_by(city) %>% filter(n() == 1) %>% ungroup()
-
-# In addition to the state information extracted directly from the letter, with
-# a left join with the non-duplicate cities we get additional information on
-# the state
-letter_ss <- left_join(letter_ss, non_duplicate_cities %>% select(city, state),
-                       by = c("city" = "city")) %>%
-  mutate(state = ifelse(!is.na(state.x), state.x, state.y)) %>%
-  select(-state.x, -state.y)
-
-# Filter out non-duplicate cities from the us cities dataset; for these cities
-# we can unambiguously assign a state
-non_duplicate_uscities <- uscities %>% group_by(city) %>% filter(n() == 1) %>% ungroup()
-letter_ss <- left_join(letter_ss, non_duplicate_uscities %>% select(city, state),
-                       by = c("city" = "city")) %>%
-  mutate(state = ifelse(!is.na(state.x), state.x, state.y)) %>%
-  select(-state.x, -state.y)
-
-## C) Extract country name ----
-
-# Keep only the unique cities names from the whole world (i.e., America and Europe)
-df_unique_cities <- allcities %>% distinct(city, .keep_all = TRUE)
-
-# Extract unique countries
-unique_countries  <- paste0("(?i)(", paste0(unique(df_unique_cities$country),
-                                            collapse = "\\b|\\b"), "\\b)")
-unique_countries <- tolower(unique_countries)
-
-# Function to extract country information from letter
-  extract_country <- function(text, city, state) {
-
-  # if american state is available, then it always has to be the United States
-  if (!is.na(state) & state != "-") {
-    return("united states")
-
-  # if city is available but not the state, it could be in America or Europe
-  # we can try and match it with our dataset which includes all the unique
-  # cities in the world
-  } else if (!is.na(city) & is.na(state)) {
-
-    country <- df_unique_cities$country[df_unique_cities$city == city]
-    return(ifelse(length(country) > 0, country, NA))
-
-  } else {
-  # Check if country is perhaps explicitly mentioned in the text
-    country_mentioned <- stringr::str_extract(text, pattern = unique_countries)
-
-    # If mentioned, return it
-    if (length(country_mentioned) > 0) {
-
-      print(paste("Country Mentioned:", country_mentioned))
-      # Check for empty strings and treat them as NA
-      return(ifelse(country_mentioned[1] != "", country_mentioned[1], NA))
-
-    } else {
-      # Return NA when no country is mentioned
-      return(NA)
-    }
-  }
-}
-
-# Apply the function
-letter_ss$country <- mapply(extract_country,
-                            letter_ss$first,
-                            letter_ss$city,
-                            letter_ss$state)
-
-# some manual corrections for country
-letter_ss <- letter_ss %>%
-  mutate(country = case_when(
-
-    str_detect(first, "mill prison plymouth") ~ "england",
-    str_detect(first, "mill prison") ~ "england",
-    str_detect(first, "brittany")    ~ "france",
-    str_detect(first, "new orleans") ~ "united states",
-    str_detect(first, "orleans")   ~ "france",
-    str_detect(first, "nantes")    ~ "france",
-    str_detect(first, "turin")     ~ "italy",
-    str_detect(first, "normandy")  ~ "france",
-
-    str_detect(city, "london")     ~ "england",
-    str_detect(city, "amsterdam")  ~ "netherlands",
-    str_detect(city, "paris")      ~ "france",
-    str_detect(city, "marstrand")  ~ "sweden",
-    str_detect(city, "masterland") ~ "sweden"))
-
+unique(letter_ss$state)
 
 # 6. MOST LIKELY PLACE OF PUBLICATION ----
 
@@ -1030,15 +1021,15 @@ temp_state <- letter_ss %>%
 # Convert to data.table
 setDT(temp_state)
 
-## B) functions to find most likely place & state of publication ----
+## B) functions to find most likely place and state of publication ----
 
-#   This function can be applied when the place of publication/ writing of an
-#   author at a particular time point is unknown. If so, search for a time span
-#   of -30 and +30 days around that time point to see if the author has sent
-#   another letter in which the location is being mentioned. If so, this location
-#   can then be used/copied as the most likely place where the letter was written
-#   assuming that the author lived in the same place during the time interval
-#   of max 30 days.
+#   This function can be applied when the place, state and/or country of
+#   publication of an author at a particular time point is unknown. If so,
+#   search for a time span of -30 and +30 days around that time point to see if
+#   the author has sent another letter in which the location is being mentioned.
+#   If so, this location can then be used/copied as the most likely place, state
+#   or country where the letter was written, assuming that the author lived in
+#   the same place during the time interval of max 30 days.
 
 # find city of publication
 city_send_from <- function(rec, dt) {
@@ -1074,65 +1065,139 @@ state_send_from <- function(rec, dt) {
   return(destin) # returns with a retrieved city name, if any
 }
 
-# retrieve cities from surrounding data ifstill missing
+# retrieve cities from surrounding data if still missing
 letter_ss$city <- ifelse(is.na(letter_ss$city),
-                         map2(letter_ss$authors,   # input vector 1 name of author
-                              letter_ss$timediff,  # input vector 2 time difference
-                              city_send_from),     # function to apply
-                         letter_ss$city) %>% unlist()     # city name when it was not missing
+                          map2(letter_ss$authors,   # input vector 1 name of author
+                               letter_ss$timediff,  # input vector 2 time difference
+                               city_send_from),     # function to apply
+                         letter_ss$city) %>%        # city name when it was not missing
+                         unlist()
 
 # retrieve state from surrounding data if still missing
 letter_ss$state <- ifelse(is.na(letter_ss$state),
-                          map2(letter_ss$authors,   # input vector 1 name of author
-                               letter_ss$timediff,  # input vector 2 time difference
-                               state_send_from),    # function to apply
-                                      letter_ss$state) %>% # state name when it was not missing in the first place
-  unlist()
+                           map2(letter_ss$authors,   # input vector 1 name of author
+                                letter_ss$timediff,  # input vector 2 time difference
+                                state_send_from),    # function to apply
+                         letter_ss$state) %>%        # state name when it was not missing in the first place
+                         unlist()
 
-#check how many are missing after applying state function
-sum(is.na(letter_ss$state))
+# Replace "NA" with real NA
+letter_ss$city[letter_ss$city == "NA"] <- NA
 
-letter_ss <- letter_ss %>%
-  rename(state_sent_from = state,
-          city_sent_from = city) %>%
-  select(authors:content,first,timediff,
-         city_sent_from,
-         state_sent_from,
-         country)
+letter_ss$city  <- trimws(letter_ss$city)
+letter_ss$state <- trimws(letter_ss$state)
 
-# 7. GET COORDINATES OF PLACE OF SENDING ---- TODO: check if this is correct!!!!
+#check how many cities  are still missing after applying state function
+sum(is.na(letter_ss$city)) # 1122
 
-# get longitude and latitude information from external file
-letter_ss <- letter_ss %>%
-  left_join(cities, by = c("city_sent_from"  = "city",
-                           "state_sent_from" = "state")) %>%
-  rename(lon_from = longitude, lat_from = latitude)
+#check how many states are still missing after applying state function
+sum(is.na(letter_ss$state)) # 1460
 
-letter_ss$city_sent_from <- ifelse(is.na(letter_ss$city_sent_from),
-                                   letter_ss %>% left_join(non_duplicate_cities, by = c("city_sent_from" = "city")),
-                                   letter_ss$state)
+# save results
+saveRDS(letter_ss, file = "data/interim/geo_extraction_c_s.rds") # city and state
+letter_ss <- readRDS("data/interim/geo_extraction_c_s.rds")
 
-# first merge with unique cities coordinates
-letter_ss <- letter_ss %>% left_join(non_duplicate_cities, by = c("city_sent_from" = "city")) %>%
-  rename(lon_from = longitude, lat_from = latitude)
+# 7. Extract country name ----
 
-# if state is not empty, we use state in the join to get the correct cities coordinates
-letter_ss$state <- ifelse(is.na(letter_ss$state),
-                          map2(letter_ss$authors,letter_ss$timediff,state_send_from),
+# Keep only the unique cities names from the whole world (i.e., America and Europe)
+df_unique_cities <- world_cities %>% distinct(city, .keep_all = TRUE)
+
+# Extract unique countries from the dataset
+unique_countries  <- paste0("(?i)(", paste0(unique(df_unique_cities$country),
+                                            collapse = "\\b|\\b"), "\\b)")
+
+# worldcities and their country selected based on highest population
+world_cities_max_pop <- world_cities %>%
+  group_by(city) %>%
+    filter(population == max(population)) %>%
+  ungroup() %>%
+  select(country, city, state, population)
+
+extract_state <- function(text, city, state) {
+
+  if (!is.na(city) & is.na(state)) {
+    state <- world_cities_max_pop$state[world_cities_max_pop$city == city]
+  }
+  return(ifelse(length(state) > 0, state, NA))
+}
+
+# Apply the function
+letter_ss$state <- mapply(extract_state,
+                          letter_ss$first_sentence,
+                          letter_ss$city,
                           letter_ss$state)
 
-letter_ss <- letter_ss %>% as.data.frame() %>%
-  mutate(thijs = case_when(!is.na(city_sent_from) & !is.na(state_sent_from)  ~ city,
-                           .default = str_extract(letter_ss$first, pattern2))) %>%
-  select(-city)
 
-# if state is empty
-#letter_ss <- letter_ss %>% left_join(cities, by = "city")
+extract_country <- function(text, city, state) {
 
+  if (!is.na(state)) {
+    return("united states")
+  }
+
+  #if (!is.na(city) & is.na(state)) {
+  #  country <- df_unique_cities$country[df_unique_cities$city == city]
+
+   if (!is.na(city) & is.na(state)) {
+    country <- world_cities_max_pop$country[world_cities_max_pop$city == city]
+  } else {
+    country_mentioned <- stringr::str_extract(text, pattern = unique_countries)
+
+    if (length(country_mentioned) > 0) {
+      return(ifelse(country_mentioned[1] != "", country_mentioned[1], NA))
+    } else {
+      return(NA)
+    }
+  }
+
+  return(ifelse(length(country) > 0, country, NA))
+}
+
+letter_ss$country <- mapply(extract_country,
+                            letter_ss$first_sentence,
+                            letter_ss$city,
+                            letter_ss$state)
+
+temp_country <- letter_ss %>%
+  select(authors,timediff,country) %>%
+  rename(timedifference = timediff) %>%
+  filter(!is.na(country))
+
+# Convert to data.table
+setDT(temp_country)
+
+# find state of publication
+country_send_from <- function(rec, dt) {
+
+  # Create an index on the authors and time-difference columns
+  setkeyv(temp_country, c("authors", "timedifference"))
+
+  # Filter the rows using vectorized filtering
+  temp2 <- temp_country[authors %in% rec & timedifference >= (dt - 30) & timedifference <= (dt + 30)] %>%
+
+    # Find the row with the minimum absolute difference
+    slice(which.min(abs(dt - timedifference)))
+
+  destin <- ifelse(nrow(temp2) == 1, temp2$country, NA)
+  return(destin) # returns with a retrieved country name, if any
+}
+
+# retrieve country name from surrounding data if still missing
+letter_ss$country <- ifelse(is.na(letter_ss$country),
+                         map2(letter_ss$authors,     # input vector 1 name of author
+                              letter_ss$timediff,    # input vector 2 time difference
+                              country_send_from),    # function to apply
+                              letter_ss$country) %>% # city name when it was not missing
+                              unlist()
+
+# 7. MERGE WITH CITY COORDINATES
+
+## merge with longitude and latitude information
 letter_ss <- letter_ss %>%
-  group_by(city,longitude, latitude) %>%
-  mutate(city_count = n()) %>%
-  ungroup()
+  left_join(city_coordinates,
+            by = c("city"    = "city",
+                   "state"   = "state",
+                   "country" = "country")) %>%
+  select(-timediff, -city_extraction, -first_sentence)
 
-
-
+# save results
+saveRDS(letter_ss, file = "data/processed/founders/letters_geo_ref.rds")

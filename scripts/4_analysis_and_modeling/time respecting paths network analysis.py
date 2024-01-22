@@ -28,9 +28,20 @@ sns.set()
 
 warnings.filterwarnings("ignore")
 
+# --------------------------------------------------------------------------------------
+# 0. Import homogeneous subset of the data 
+# --------------------------------------------------------------------------------------
+
+# Homogeneous data is based on either: 
+# 1) "shico-based letter selection.R"   : subset of letters is made based on year-dependent wordoccurences from shico
+# 2) "semi_supervised_topic_modeling.R" : subset of letters is made based on topic probability 
+
+# in both cases, we have a dataset inclusing the variables:
+# "authors","recipients","sending_date","time","sender_id","receiver_id"
+
 # Set global paths to read in the data and to store the results
-path_to_data    = 'data_tv/'
-path_to_results = 'results_tv/'
+path_to_data    = '../../data/processed/founders/'
+path_to_results = '../../output/figures/'
 
 # --------------------------------------------------------------------------------------
 # 1. Prepare data for analyzing aggregated networks and path-respecting networks
@@ -38,16 +49,31 @@ path_to_results = 'results_tv/'
 
 # Loading the letter data on liberal politics or on republican politics. Both datasets
 # are homogenous subsets of the original dataset. The original dataset contains letters
-# of writers on a large variety of topics. Using either the results from the shico analysis
-# through word counts or topic analysis, We selected those letters that are centered on 
-# a specific political ideology. Run the following analysis on either links_liberal 
-# or links_republican.
+# of writers on a large variety of topics. Using either the results from
+# 
+# 1) the shico analysis through word counts or 
+# 2) topic analysis
+#
+# We select those letters that are centered on a specific political ideology, either by filename or by 
+# selecting the approapriate topic number 
 
-# select dataset: republican or liberal
+# If 1) 
+# Run the following analysis separatedly on either 'links_liberal' or 'links_republican'
+# select dataset: liberal or republican
 ideology = "_" + "liberal"
 file_path = path_to_data + 'links{}.csv'.format(ideology)
 
 links = pd.read_csv(file_path)
+display(links.head())
+
+# If 2) 
+file_path = path_to_data + 'letters_with_topic_info.csv'
+
+# read in all letters
+letters = pd.read_csv(file_path)
+
+# make subset of letters using topic columnn as a document-level variable indicating to which topic a letter belongs
+links = letters[letters['topic'] == 1]  # 1 = liberal, 2 = republican
 display(links.head())
 
 # amount of letters
