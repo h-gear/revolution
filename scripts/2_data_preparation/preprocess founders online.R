@@ -260,7 +260,7 @@ ffc5 <- ffc4 %>%
   select(-amount,-diff)
 
 saveRDS(ffc5, file = "data/interim/ffc_no_duplicates.rds")
-ffc5 <- readRDS("data/interim/ffc_no_duplicates.rds")
+#ffc5 <- readRDS("data/interim/ffc_no_duplicates.rds")
 
 ## C) TRANSLATE NON-ENGLISH TEXTS ----
 
@@ -285,10 +285,10 @@ table(ffc5$ed_trans) #733 translations by editors
 ffc5 <- ffc5 %>%
   separate(text, c("original", "translation"), sep = pattern, remove = F)
 
-# replace the text in 'text' with the corresponding text from 'translation'
-# when 'translation' is not NA, and keep the original 'text' when 'translation'
-# is NA, the latter meaning there is either no translation by the editors or the
-# text was already in English)
+# We replace the text in the text column with the corresponding translation column
+# is not NA, and keep the original 'text' when 'translation' is NA, the latter
+# meaning there is either no translation by the editors or the text was already
+# in English)
 ffc5$text <- ifelse(!is.na(ffc5$translation),ffc5$translation, ffc5$text)
 ffc5 <- ffc5 %>% select(-original,-translation,-ed_trans)
 
@@ -316,13 +316,52 @@ ffc5 <- ffc5 %>%
     mutate(language = furrr::future_map(text, detect_language)) %>%
     as.data.frame()
 
-# overview of all the different languages in the FO corpus
-unique(ffc5$language)
-
 saveRDS(ffc5, file = "data/interim/ffc_with_language_information.rds")
-ffc5 <- readRDS(file = "data/interim/ffc_language_information.rds")
 
-### 3. Translate the remaining letters with google_translate ----
+# Read stored data with information on type of language, if necessary
+ffc5 <- readRDS(file = "data/interim/ffc_with_language_information.rds")
+
+# Save subset of letters with problematic language detection for further inspection
+ffc5_language_unknown <- ffc5 %>% mutate(language = unlist(language)) %>%
+  filter(language == "Unknown") %>%
+  mutate(texts = str_squish(text))
+write.csv(ffc5_language_unknown, "data/interim/ffc_language_unknown.csv", row.names = FALSE)
+
+ffc5 <- ffc5 %>% mutate(language = unlist(language)) %>%
+  filter(language != "Unknown")
+glimpse(ffc5)
+
+# get an overview of the number of letters per language (e.g., fr = 6033 letters)
+frequency_table <- ffc5 %>% count(language) %>% arrange(desc(n))
+frequency_table
+#Unknown: 1998 letters
+
+# # small manual correction
+# french_words <- c("Monsieur", "Messieurs", "Messrs", "c'est", "J’ai")
+# french_words <- c("votre")
+#
+# checken <- ffc5 %>%
+#   filter(language == "Unknown") %>%
+#   mutate(
+#     language = if (any(str_detect(text, regex(paste(french_words, collapse = "|"), ignore_case = TRUE)))) {
+#       "fr"
+#     } else {
+#       as.character(language)
+#     }
+#   )
+#
+# checken <- ffc5 %>%
+#   filter(language == "Unknown") %>%
+#   mutate(
+#     has_french_word = ifelse(
+#       any(str_detect(text, regex(paste(french_words, collapse = "|"), ignore_case = TRUE))),
+#       1,
+#       0
+#     )
+#   )
+
+
+### 3. Translate the still non-English letters with google_translate ----
 
 # setup 11 threads
 plan(multisession, workers = 11)
@@ -333,7 +372,7 @@ future::plan(seed = TRUE)
 translated_texts <- ffc5 %>%
 
   # 6854 letters remain to be translated into English
-  filter(language != "en" & language != "Unknown") %>%
+  filter(language != "en") %>%
 
   mutate(translation = furrr::future_map(text,
                        ~ google_translate(.x,
@@ -349,25 +388,24 @@ translated_texts <- ffc5 %>%
   )
 
 saveRDS(translated_texts, file = "data/interim/translated_texts.rds")
-translated_texts <- readRDS(file = "data/interim/translated_texts.rds")
+#translated_texts <- readRDS(file = "data/interim/translated_texts.rds")
 
 ### 4. Handle translation problem cases ----
+
 # Some letters (# 303) were not correctly translated in the step above using
 # google_translate from the polyglotr package. We therefore 'manually' translated
-# these letters using the documents import in google scholar
+# these letters using the documents import in google translate
 
 # select the non-translate letters
 not_translated <- translated_texts %>% filter(is.na(translation)) %>%
   mutate(id = row_number()) %>%
   select(id,authors2,recipients2,text)
+writexl::write_xlsx(not_translated, "data/interim/problemcases_to_translate.xlsx")
 
-# Save as excel
-writexl::write_xlsx(not_translated, "data/interim/to_translate.xlsx")
-
-# import into google scholar
+# import into google translate
 
 # Read in the excel file with the now correctly translated texts
-google_translated <- readxl::read_excel("data/interim/google_translated.xlsx") %>%
+google_translated <- readxl::read_excel("data/interim/problemcases_translated.xlsx") %>%
   rename(translation = text) %>%
   select(id,translation)
 
@@ -390,8 +428,9 @@ ffc5_translated <- ffc5 %>%
   # update the text variable with the translated text, if any
   mutate(text = ifelse(is.na(translation), text, translation))
 
-### 4. Save data (all english now) ----
+### 4. Save data (all English now) ----
 saveRDS(ffc5_translated, file = "data/interim/ffc5_translated.rds")
+#ffc5_translated <- readRDS(file = "data/interim/ffc5_translated.rds")
 
 ## D) CREATE UNIX-TIME VARIABLE ----
 # Since several analyses in this project uses unix timestamps which works only
@@ -443,13 +482,16 @@ saveRDS(ffc6, file = "data/processed/founders/ffc_preprocessed.rds")
 ## A) SAVE DICTIONARY IDS AND NAMES ----
 
 # create a table of all people to map to numeric ids
-pp_nodes_sender   <- ffc6 %>% filter(!is.na(sender_id)) %>% select(sender_id, authors) %>%
+pp_nodes_sender   <- ffc6 %>% filter(!is.na(sender_id)) %>%
+    select(sender_id, authors) %>%
     rename(person_id = sender_id, last_name = authors)
 
-pp_nodes_receiver <- ffc6 %>% filter(!is.na(receiver_id)) %>% select(receiver_id, recipients) %>%
+pp_nodes_receiver <- ffc6 %>% filter(!is.na(receiver_id)) %>%
+    select(receiver_id, recipients) %>%
     rename(person_id = receiver_id, last_name = recipients)
 
-nodes <- rbind(pp_nodes_sender,pp_nodes_receiver) %>% distinct(person_id, last_name)
+nodes <- rbind(pp_nodes_sender,pp_nodes_receiver) %>%
+  distinct(person_id, last_name)
 
 # this dataset is used later in the pathpy analysis
 write.csv(nodes, "data/processed/founders/nodes_ff.csv", row.names = FALSE)

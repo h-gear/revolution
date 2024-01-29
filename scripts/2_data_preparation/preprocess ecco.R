@@ -360,21 +360,22 @@ ecco2 <- ecco2 %>%
            place_of_publication = ifelse(is.na(place_of_publication), str_extract(surrounding_words_print, pattern_cities), place_of_publication),
 
            # remove irrelevant words
-           place_of_publication = ifelse(place_of_publication %in% c("administration","fire","goldyng","newry","notes","our","author",
-                                                                     "poetry","prayers","g","pth","the","xcii","ii","treatise",
-                                                                     "large","journal","invasion","virgil","callico","quarto",
-                                                                     "a","account","accounts","actually","and","any","are",
-                                                                     "as","be","been","being","bible","books"," contributors",
-                                                                     "elegantly","ever","fairly","first","fore",
-                                                                     "former","formerly", "had","have", "having",
-                                                                     "house","is","lately","lick","my","neatly",
-                                                                     "not","o","or","originally","pamphlet","part",
-                                                                     "partly", "plainly","poem","publick","s",
-                                                                     "schools","separately","some","t021112cw33100685950054802800books",
-                                                                     "their","them","they","two","was","wearing",
-                                                                     "were","who","by","de","great","high",
-                                                                     "in","new","of","on","royal","the","tow",
-                                                                     "under","upon","with","worth"), NA, place_of_publication))
+           place_of_publication = ifelse(place_of_publication %in%
+          c("administration","fire","goldyng","newry","notes","our","author",
+          "poetry","prayers","g","pth","the","xcii","ii","treatise",
+          "large","journal","invasion","virgil","callico","quarto",
+          "a","account","accounts","actually","and","any","are",
+          "as","be","been","being","bible","books"," contributors",
+          "elegantly","ever","fairly","first","fore",
+          "former","formerly", "had","have", "having",
+          "house","is","lately","lick","my","neatly",
+          "not","o","or","originally","pamphlet","part",
+          "partly", "plainly","poem","publick","s",
+          "schools","separately","some","t021112cw33100685950054802800books",
+          "their","them","they","two","was","wearing",
+          "were","who","by","de","great","high",
+          "in","new","of","on","royal","the","tow",
+          "under","upon","with","worth"), NA, place_of_publication))
 
 
 sum(is.na(ecco2$place_of_publication)) #488
@@ -383,3 +384,17 @@ table(ecco2$place_of_publication)
 
 # 8. SAVE PROCESSED DATA ----
 saveRDS(ecco2, file = "data/processed/ecco/ecco_preprocessed.rds")
+
+# 9. ADD COORDINATES ----
+## merge with longitude and latitude information
+ecco2 <- ecco2 %>%
+  left_join(city_coordinates,
+            by = c("city"    = "city",
+                   "state"   = "state",
+                   "country" = "country")) %>%
+  select(-timediff, -city_extraction, -first_sentence)
+
+# save results
+saveRDS(letter_ss, file = "data/processed/founders/letters_geo_ref.rds")
+
+# see code in FO how to merge coordinates with ecco2
