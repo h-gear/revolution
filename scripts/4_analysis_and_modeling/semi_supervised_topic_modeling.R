@@ -135,7 +135,7 @@ for (i in 1:num_chunks) {
 saveRDS(pos_tagged_data, file = "data/interim/pos_tagged_data.rds")
 
 # reading the stored data on the pos-tagged data, if necessary
-pos_tagged_data <- readRDS(file = "data/interim/pos_tagged_data.rds")
+#pos_tagged_data <- readRDS(file = "data/interim/pos_tagged_data.rds")
 
 # Flatten the list into a single vector and combine chunks into one vector
 corpus_nouns <- pos_tagged_data %>% unlist()
@@ -352,18 +352,19 @@ sum(DFM[, "right"])
 saveRDS(DFM, file = "data/interim/DFM.rds")
 
 # The precomputed object is in the data/interim folder
-#DFM <- readRDS("data/interim/DFM.rds")
+DFM <- readRDS("data/interim/DFM.rds")
 
 # DTM (document-term-matrix as in package topicmodels) for coherence function
 DTM <- convert(DFM, to = "topicmodels")
 saveRDS(DTM, file = "data/interim/DTM.rds")
+#DTM <- readRDS("data/interim/DTM.rds")
 
 # The precomputed object is in the data/interim folder
 #DTM <- readRDS("data/interim/DTM.rds")
 
 # Semi-supervised topic modeling with seeded LDA: model selection ----
 
-## 1. Gauging the number of topics ----
+## 1. Gauging the initial number of topics ----
 
 # Find the number of topics that best fits the data. Here, we use the divergence()
 # function which implements the Kullback-Leibler (KL) divergence. This measure
@@ -387,11 +388,17 @@ n <- seq(15, 35, by = 2)
 
 # Function fitting the LDA model and computing the divergence score, to be used
 # for parallelizing the code with furrr
+
+# The topic distribution within a document can be controlled with the
+# alpha-parameter of the model (default = 0.5. Low alpha priors ensure that the
+# inference process distributes the probability mass on a few topics for each
+# document
 get_div_score <- function(DFM, k) {
   lda_fit <- textmodel_lda(DFM,
                            k,
                            batch_size = 0.01,
                            auto_iter  = TRUE,
+                           alpha      = 0.2,
                            verbose    = TRUE)
   return(divergence(lda_fit))
 }
@@ -489,7 +496,7 @@ sum(word_counts) # 818
 
 # Given the seed topics, check for models with different amount of residual topics
 
-# While the 29-topic model from above (still ignorant of any seed topics) has
+# While the 31-topic model from above (still ignorant of any seed topics) has
 # the highest divergence, maximal divergence does not necessarily mean that that
 # number of topics yields maximal meaningfulness. So, next We'll explore multiple
 # models with different amounts of residual topics which come on top of the three
@@ -503,7 +510,7 @@ sum(word_counts) # 818
 
 # Here, we choose the number of residual topics to inspect, again, those in
 # addition to the 3 seed topics as formulated in the dictionary above
-K_range <- c(23,24,25, 26, 27,28,29)
+K_range <- c(25,26,27, 28, 29,30,31)
 
 # So, these amount of topics plus, each time, the 3 seed topics, leads to
 # overall model-testing with 26,27,28, 29 ,30,31,32 topics. This ranges around
@@ -522,6 +529,7 @@ lda_fits <- K_range %>%
                           residual    = .x,
                           batch_size  = 0.01,
                           auto_iter   = TRUE,
+                          alpha       = 0.2, # we are interested in a more peaky distribution of topics in the model
                           verbose     = TRUE),
     furrr_options(seed = TRUE))
 
@@ -529,123 +537,28 @@ end <- Sys.time()
 end - start # Time difference of 1.125711 hours
 
 saveRDS(lda_fits, file = "data/interim/lda_fits.rds")
-#lda_fits <- readRDS(file = "data/interim/lda_fits.rds")
+lda_fits <- readRDS(file = "data/interim/lda_fits.rds")
 
 # If necessary, access the candidate models via:
 # lda23_df <- as_tibble(terms(lda_fits[[1]]))
 
 ## 3. Metrics: exclusivity and coherence ----
+source("scripts/functions/exclusivity.R")
+source("scripts/functions/coherence.R")
 
-exclusivity <- function(lda, dfm, lambda = 0, num.words = 0){
-
-  #' Topic exclusivity
-  #'
-  #' We use LDAvis relevance score with lambda = 0 for putting emphasis on
-  #' exclusivity. See Sievert, C., Shirley, K.E. (2014). LDAvis: A method for
-  #' visualizing and interpreting topics. In: Proceedings of the workshop on
-  #' interactive language learning, visualization, and interfaces, 63–70
-  #' Modified from "exclusivity_LDAproto function" by A. Bitterman
-
-  #' @param lda
-  #' @param dfm
-  #' @param lambda
-  #' @param num.words
-
-  #' @return
-
-  #' @export
-
-  #' @examples
-  #'  exclusivity(lda, dfm, lambda = 0, num.words = 0)
-  #'  exclusivity(lda, dfm, lambda = 0.6, num.words = 10)
-  #'  exclusivity(lda, dfm, lambda = 0.6, num.words = 20)
-
-  if (num.words == 0)
-    num.words = dim(dfm)[2]
-
-  pwt <- t(as.matrix(lda$phi))
-  pw  <- colSums(dfm)/sum(dfm)
-  res <- apply(pwt, 1, function(x, num.words, pw, lambda) {
-    x <- lambda * log(x) + (1 - lambda) * log(x/pw)
-    return((sort(x, decreasing = TRUE)[1:num.words]))
-  }, num.words, pw, lambda)
-
-  return(colMeans(res))
-}
-
-# Coherence: Modified from coherence_LDAproto function (A. Bitterman)
-coherence <- function(model, DTM, N = 10) {
-
-  # Based on Mimno, D., Wallach, H. M., Talley, E., Leenders, M., & McCallum, A.
-  # (2011). Optimizing semantic coherence in topic models. In: Proceedings of
-  # the Conference on Empirical Methods in Natural Language Processing
-  # (pp. 262-272). Association for Computational Linguistics. Chicago
-
-  # Ensure matrix or Matrix-format (convert if slam)
-  require(Matrix)
-  require(slam)
-  if (is.simple_triplet_matrix(DTM)) {
-    DTM <- sparseMatrix(i = DTM$i, j = DTM$j, x = DTM$v,
-                        dims = c(DTM$nrow, DTM$ncol), dimnames = dimnames(DTM))
-  }
-
-  K <- model$K
-
-  DTMBIN <- DTM > 0
-
-  documentFrequency <- colSums(DTMBIN)
-  names(documentFrequency) <- colnames(DTMBIN)
-
-  topNtermsPerTopic <- sentopics::topWords(model, nWords = 10) %>%
-    select(topic,word) %>%
-    pivot_wider(names_from  = "topic",
-                values_from = "word",
-                values_fn   = list) %>%
-    unnest(everything())
-
-  topNtermsPerTopic <- as.matrix(topNtermsPerTopic)
-  allTopicModelTerms <- unique(as.vector(topNtermsPerTopic))
-
-  DTMBIN     <- DTMBIN[, allTopicModelTerms]
-  DTMBINCooc <- t(DTMBIN) %*% DTMBIN
-  DTMBINCooc <- t((DTMBINCooc + 1) / colSums(DTMBIN))
-  DTMBINCooc <- log(DTMBINCooc)
-  DTMBINCooc <- as.matrix(DTMBINCooc)
-
-  coherence  <- rep(0, K)
-  pb <- txtProgressBar(max = K)
-
-  for (topicIdx in 1:K) {
-    setTxtProgressBar(pb, topicIdx)
-    topWordsOfTopic <- topNtermsPerTopic[,topicIdx]
-
-    coherence[topicIdx] <- 0
-    for (m in 2:length(topWordsOfTopic)) {
-      for (l in 1:(m - 1)) {
-        mTerm <- as.character(topWordsOfTopic[m])
-        lTerm <- as.character(topWordsOfTopic[l])
-        coherence[topicIdx] <- coherence[topicIdx] + DTMBINCooc[mTerm, lTerm]
-      }
-    }
-  }
-  close(pb)
-
-  return(coherence)
-}
-
-# Inspect topic coherence and exclusivity of candidate models listed in lda_fits object
-
-# First, we convert the seeded_lda models to a list of lda model objects with
-# different k's
+# Inspect topic coherence and exclusivity of candidate models listed in
+# lda_fits object. First, we convert the seeded_lda models to a list of lda
+# model objects withdifferent k's
 sentopics_lda_fits <- lapply(lda_fits, sentopics::as.LDA)
 saveRDS(sentopics_lda_fits, file = "data/interim/sentopics_lda_fits.rds")
+#sentopics_lda_fits <- readRDS("data/interim/sentopics_lda_fits.rds")
 
 # Next, for each of the 7 topic models, we calculate coherence scores of each
 # individual topic within that model
 coh      <- lapply(sentopics_lda_fits, coherence, DTM, N = 25)
 coh_mean <- unlist(lapply(coh, mean))
 
-#Then, again for each topic model, we calculate the exclusivity scores of each
+# Again for each topic model, we calculate the exclusivity scores of each
 # individual topic within that model
 exc      <- lapply(sentopics_lda_fits, exclusivity, DFM, num.words = 15)
 exc_mean <- unlist(lapply(exc, mean))
@@ -655,7 +568,8 @@ semcoh <- scale(coh_mean)
 exclus <- scale(exc_mean)
 semexc <- rowMeans(cbind(semcoh, exclus)) # mean of scaled sem & exc
 
-tiff(filename = "output/figures/Mean Coherence & Exclusivity.tiff", width = 6000, height = 4000, res = 450)
+tiff(filename = "output/figures/Mean Coherence & Exclusivity.tiff", width = 6000,
+     height = 4000, res = 450)
 par(mfrow = c(1,1))
 
 plot(semcoh, type = "l", col = "blue", xaxt = "n", lwd = 2, ylim = c(-3, 3),
@@ -674,7 +588,7 @@ dev.off()
 # we select two models of different granularity for further inspection
 
 # select indices of desired amount of residual topics k
-select <- K_range %in% c(26, 29)
+select <- K_range %in% c(28, 31)
 candidates_inspect <- lda_fits[select]
 
 ## 5. Quality of single topics ----
@@ -688,126 +602,16 @@ for (i in 1:length(candidates_inspect)) {
   text(coh[select][[i]], exc[select][[i]], labels = paste("", 1:length(coh[select][[i]])), cex = 1.5)
 }
 
-
 ## 6. Visualize topic similarity ----
-#source("./helper_functions/topic_network.R")
-
-topic_network <- function(model, thresh = 0.15){
-
-  # The selected model and number of topics
-  lda <- model
-  K   <- lda$K
-
-  # theta (document-topic probabilities)
-  theta <- lda$theta
-  colnames(theta) <- NULL
-
-  # beta (word-topic probabilities) a.k.a. phi
-  beta <- lda$phi
-  colnames(beta) <- NULL
-
-  # Extract the most representative words in each topic
-  topwords <- sentopics::topWords(model, method = "probability", nWords = 10) %>%
-    select(topic, word) %>%
-    pivot_wider(names_from  = "topic",
-                values_from = "word",
-                values_fn   = list) %>%
-    unnest(everything())
-
-  topwords <- as.matrix(topwords)
-  colnames(topwords) <- NULL
-  topwords <- apply(topwords, 2, paste, collapse = ", ")
-
-  prevalence <- colMeans(theta)
-
-  # number of docs with theta > .5 per topic
-  n_docs <- apply(theta, 2, function(x){unname(table(x > 0.5)[2])})
-
-  # use first two top terms as initial topic labels
-  label <- sapply(topwords, function(x) {paste(strsplit(x, ", ")[[1]][1:2], collapse = " ")})
-  label <- unname(label)
-
-  # add ID for disambiguation
-  for (i in 1:K) {
-    label[i] <- paste0("T", i, ": ", label[i])
-  }
-
-  # topic correlations
-  cor_mat <- cor(beta)
-
-  # omit small correlations to improve graph readability
-  cor_mat[cor_mat < thresh] <- 0
-  diag(cor_mat) <- 0 # needed for network plot
-
-  # network of the word distributions over topics (topic relation)
-  graph <- graph.adjacency(cor_mat, weighted = TRUE, mode = "lower")
-
-  # edge labels
-  edge_attr(graph, "name")  <- round(E(graph)$weight, 2)
-  edge_attr(graph, "label") <- E(graph)$name
-
-  # line thickness
-  E(graph)$edge.width <- E(graph)$weight * 20
-
-  # labels
-  V(graph)$label <- label
-  V(graph)$size  <- 10
-
-  # Detect communities within the graph and add membership as vertex attribute
-  # multi-level modularity optimization algorithm for finding community structure
-  cd <- cluster_louvain(graph)
-  V(graph)$community <- cd$membership
-
-  # nodes
-  nodes        <- as.data.frame(1:K)
-  names(nodes) <- "id"
-  nodes$label  <- label
-  nodes$size   <- colMeans(theta)*100 # size by topic prevalence
-  nodes$group  <- V(graph)$community
-
-  # edges
-  edges           <- get.data.frame(graph)
-  names(edges)[3] <- "width"
-  edges$label     <- as.character(round(edges$width, 2))
-  edges$label     <- ifelse(nchar(edges$label) == 3, paste0(edges$label, "0"), edges$label)
-  edges$width     <- edges$width * 4 # improve visibility in plot
-  rbPal           <- colorRampPalette(c("grey", "cornflowerblue"))
-  edges$color     <- rbPal(10)[as.numeric(cut(edges$width, breaks = 10))] # color edge label according to width
-
-  set.seed(1234)
-
-  visNetwork(nodes, edges) %>%
-    visIgraphLayout(layout = "layout.fruchterman.reingold", physics = TRUE, smooth = TRUE) %>%
-
-    visNodes(
-      shape = "dot",
-      font = list(size = 10, background = "white"),
-      color = list(
-        background = "#0085AF",
-        border     = "#013848",
-        highlight  = "#FF8000"
-      ),
-      shadow = list(enabled = TRUE, size = 10)
-    ) %>%
-
-    visEdges(
-      label  = edges$label,
-      font   = list(color = "slategray", size = 10),
-      smooth = list(enabled = TRUE, type = "diagonalCross"),
-      shadow = FALSE,
-      color = list(color = "#0085AF", highlight = "#C62F4B", opacity = .5)
-    ) %>%
-
-    visOptions(highlightNearest = list(enabled = TRUE, degree = 1, hover = TRUE))
-}
+source("scripts/functions/topic_network.R")
 
 # create network of topics for different models to allow for comparison
-topic_network(sentopics_lda_fits[[which(K_range == 26)]])
-topic_network(sentopics_lda_fits[[which(K_range == 29)]])
+topic_network(sentopics_lda_fits[[which(K_range == 28)]])
+topic_network(sentopics_lda_fits[[which(K_range == 31)]])
 
 
 ## 7. Model selection ----
-lda_res <- lda_fits[[which(K_range == 26)]]
+lda_res <- lda_fits[[which(K_range == 28)]]
 
 # extract the most likely words for each topic and inspect these to come up
 # with topic labels
@@ -838,7 +642,15 @@ topicnames <-
       "21_Professional Etiquette and Procedures in Government and Business",
       "22_Professional Development and Career Advancemen",
       "23_Strategic Planning and Decision-Making in Business",
-      "24_French language")
+      "24_French language",
+      "25_aaaa",
+      "26_bbbb",
+      "27_cccc",
+      "28_ddddd",
+      "29_eeeee",
+      "30_fffff",
+      "31_gggggg"
+      )
 
 # update the topic labels in theta
 colnames(lda_res[["theta"]]) <- NULL
@@ -884,35 +696,7 @@ topterms <- apply(topterms, 2, paste, collapse = ", ")
 
 # with highest probability of addressing the topic (i.e., high theta)
 
-#source("./helper_functions/get_topdocs.R")
-get_topdocs <- function(model, texts, n = 10, text_ID = rownames(texts)) {
-
-  theta <- model$theta
-  K     <- lda$K
-
-  # 10 most representative docs
-  theta_tmp    <- as.data.frame(theta)
-  theta_tmp$ID <- text_ID # for matching theta with texts
-
-  topdocs <- list()
-
-  for (i in 1:K) {
-    # get row indices of top n
-    tmp <- theta_tmp[order(-theta_tmp[,i]),]
-    ids <- tmp$ID[1:n]
-
-    topdocs_tmp <- texts[text_ID == ids[1],]
-    for (j in 2:length(ids)) {
-      topdocs_tmp <- rbind(topdocs_tmp, texts[text_ID == ids[j],])
-    }
-
-    # add theta probabilities
-    topdocs_tmp$prob <- tmp[1:n,i]
-    topdocs[[i]] <- topdocs_tmp
-  }
-
-  return(topdocs) # a list
-}
+source("scripts/functions/get_topdocs.R")
 
 # you may need to set a different text_ID
 # Especially if you dropped docs during pre-processing! (cf. dfm_trim)
@@ -980,6 +764,9 @@ topic_probabilities <- as.data.frame(get_doc_topic_probs(lda_res)) %>%
 # TODO: set min_prob higher to what value????
 texts$topic <- seededlda::topics(lda_res,  min_prob = 0.05)
 
+frequency_table <- texts %>% count(topic) %>% arrange(desc(n))
+frequency_table
+
 ## 4a. Distribution of amount of letters per main topic ----
 topics_table          <- ftable(texts$topic)
 topicsprop_table      <- as.data.frame(prop.table(topics_table))
@@ -1008,6 +795,7 @@ barplot(prevalence_sorted, horiz = TRUE, las = 1, xlim = c(0, 0.06),
 ## 4c. Prevalence by year ----
 
 # original code by https://github.com/mponweiser/thesis-LDA-in-R/blob/master/application-pnas/trends.Rnw
+# see also https://tm4ss.github.io/docs/Tutorial_6_Topic_Models.html#1_Model_calculation
 
 # overall overview of topic prevalence by year
 theta_mean_by_year_by <- by(lda$theta, texts$year, colMeans)
@@ -1080,8 +868,11 @@ letters_with_topics <- texts %>%
 # Save preprocessed data wit htopic information ----
 write.csv(letters_with_topics,"data/processed/founders/letters_with_topic_info.csv")
 
-# show distribution over topics for sample of letters
- letters_with_topics %>% sample_n(50) %>%
+# Let's look more closely at the distribution of topics within some individual
+# documents. Show distribution over topics for sample of letters
+# see also https://tm4ss.github.io/docs/Tutorial_6_Topic_Models.html#1_Model_calculation
+
+letters_with_topics %>% sample_n(20) %>%
   select(id, matches("^[0-9]")) %>%
   pivot_longer(-id, names_to = 'topic',values_to = 'probability') %>%
   #mutate(topic = str_replace(topic,'prob_','')) %>%
@@ -1122,12 +913,10 @@ write.csv(letters_with_topics,"data/processed/founders/letters_with_topic_info.c
   ungroup()
 
 # save results
-# TODO: specify proper directory
-write.csv(yr_topic_term_freq,"yr_topic_term_freq.csv")
+write.csv(yr_topic_term_freq,"data/processed/founders/yr_topic_term_freq.csv")
 
 
 # Topic probability distribution differences for Founding Fathers ----
-
 letters_with_topics_ff <- letters_with_topics %>%
   filter(authors == "Franklin, Benjamin" | authors == "Jefferson, Thomas" |
          authors == "Washington, George" | authors == "Adams, John"       |

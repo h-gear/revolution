@@ -60,7 +60,7 @@ path_to_results = '../../output/figures/'
 # If 1) 
 # Run the following analysis separatedly on either 'links_liberal' or 'links_republican'
 # select dataset: liberal or republican
-ideology = "_" + "liberal"
+ideology = "_" + "republican"
 file_path = path_to_data + 'links{}.csv'.format(ideology)
 
 links = pd.read_csv(file_path)
@@ -73,7 +73,7 @@ file_path = path_to_data + 'letters_with_topic_info.csv'
 letters = pd.read_csv(file_path)
 
 # make subset of letters using topic columnn as a document-level variable indicating to which topic a letter belongs
-links = letters[letters['topic'] == 1]  # 1 = liberal, 2 = republican
+links = letters[letters['topic'] == 1]  # 1 = liberal, 2 = republican, etc..
 display(links.head())
 
 # amount of letters
@@ -117,7 +117,7 @@ data.drop('sending_date', axis = 1, inplace = True)
 display(data.head())
 
 # Check amount of letters again
-len(data.index) # 10.610 letters
+len(data.index) # 10043 letters
 
 # save data to file
 #data.to_csv(path_to_data + 'data_pathpy.csv')
@@ -147,10 +147,9 @@ df.to_csv(path_to_data + 'data_weighted{}.csv'.format(ideology), sep=' ', header
 # 2. Compute time-respecting paths from the letter correspondence data 
 # --------------------------------------------------------------------------------------
 
-# Paths require the parameter 'delta t', i.e., the maximum time a person can remember an
-# idea before it fades away from memory. delta t corresponds to the maximum time to be
-# passed between two consecutive edges. For example, when  delta t = 42, a path will be
-# broken when more than 42 days have passed between two consecutive edges in a path.
+# Paths require the parameter 'delta t', corresponding to the maximum time to be
+# passed between two consecutive edges. For example, when  delta t = 49, a path will be
+# broken when more than 49 days have passed between two consecutive edges in a path.
 
 # Compute a temporal network ----
 # A temporal network provides edges with time stamps (the sending dates of letters)
@@ -191,10 +190,10 @@ pbar.close()
 # In communication networks, the betweenness of a node indicates to what extent
 # that node controbutes to the transmission of ideas in the network.
 
-# we base our results on delta t = 42
-delta_t = 42
+# we base our results on delta t = 49
+delta_t = 49
 
-nodes = pd.read_csv(path_to_data + 'nodes.csv')
+nodes = pd.read_csv(path_to_data + 'nodes_ff.csv')
 paths = pp.Paths.read_file(path_to_results + 'paths_deltaT_{}.ngram'.format(delta_t), separator = ',')
 
 display(nodes.head())

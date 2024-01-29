@@ -260,7 +260,7 @@ ffc5 <- ffc4 %>%
   select(-amount,-diff)
 
 saveRDS(ffc5, file = "data/interim/ffc_no_duplicates.rds")
-ffc5 <- readRDS("data/interim/ffc_no_duplicates.rds")
+#ffc5 <- readRDS("data/interim/ffc_no_duplicates.rds")
 
 ## C) TRANSLATE NON-ENGLISH TEXTS ----
 
@@ -321,11 +321,10 @@ saveRDS(ffc5, file = "data/interim/ffc_with_language_information.rds")
 # Read stored data with information on type of language, if necessary
 ffc5 <- readRDS(file = "data/interim/ffc_with_language_information.rds")
 
-# Save subset of letters with problematic language detection
+# Save subset of letters with problematic language detection for further inspection
 ffc5_language_unknown <- ffc5 %>% mutate(language = unlist(language)) %>%
   filter(language == "Unknown") %>%
   mutate(texts = str_squish(text))
-
 write.csv(ffc5_language_unknown, "data/interim/ffc_language_unknown.csv", row.names = FALSE)
 
 ffc5 <- ffc5 %>% mutate(language = unlist(language)) %>%
@@ -431,8 +430,7 @@ ffc5_translated <- ffc5 %>%
 
 ### 4. Save data (all English now) ----
 saveRDS(ffc5_translated, file = "data/interim/ffc5_translated.rds")
-
-ffc5_translated <- readRDS(file = "data/interim/ffc5_translated.rds")
+#ffc5_translated <- readRDS(file = "data/interim/ffc5_translated.rds")
 
 ## D) CREATE UNIX-TIME VARIABLE ----
 # Since several analyses in this project uses unix timestamps which works only

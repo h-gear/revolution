@@ -1,3 +1,4 @@
+# Function description ----
 #' Function Title: shico_word_merger
 #'
 #' Description: Make a subset of the data in which all letters are on the topic
@@ -25,7 +26,7 @@
 #'
 #' @author Thijs Vroegh
 
-# libraries ----
+# Libraries ----
 library(tidyverse)
 
 shico_word_merger <- function(letters_path, shico_words_path, min_words) {
@@ -54,7 +55,7 @@ letters_path     <- "data/processed/founders/ffc_preprocessed.csv"
 shico_words_path_liberal    <- "data/processed/founders/liberal_shico_vocabulary_per_year.csv"
 shico_words_path_republican <- "data/processed/founders/republican_shico_vocabulary_per_year.csv"
 
-# Filter letter data by applying shico_word_merger function ----
+# Shico_word_merger function call ----
 political_data_liberal    <- shico_word_merger(letters_path, shico_words_path_liberal, min_words = 7)
 political_data_republican <- shico_word_merger(letters_path, shico_words_path_republican, min_words = 7)
 
@@ -66,6 +67,6 @@ pp_republican <- political_data_republican %>%
     select(authors,recipients,sending_date, time,sender_id,receiver_id) %>%
     arrange(time) # 10495 letters
 
-# The csv files below are used for the later temporal path-respecting analyses
+# Save for later temporal path-respecting analyses ----
 write.csv(pp_liberal,   "data/processed/founders/links_liberal.csv", row.names = FALSE)
 write.csv(pp_republican,"data/processed/founders/links_republican.csv", row.names = FALSE)

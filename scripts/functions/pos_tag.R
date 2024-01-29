@@ -7,6 +7,7 @@
 #'
 #' The function is modified from: https://tm4ss.github.io/docs/Tutorial_8_NER_POS.html
 #' and adapted from code by André Bittermann: https://github.com/abitter/PTOS
+#'
 #' The function is designed to apply part-of-speech tagging to a corpus using
 #' the openNLP package. It constructs a pipeline of annotators, including
 #' sentence tokenization, word tokenization, and part-of-speech tagging.
@@ -33,17 +34,18 @@
 #' sentence <- c("I am a sentence.", "I am another sentence.")
 #' pos_tag(x = sentence, pos_filter = c("NNP"))
 #' @export
+#'
 pos_tag <- function(x, pos_filter = c("NNP", "NNPS", "NN", "NNS")){
 
   options(stringsAsFactors = FALSE)
-  #library(quanteda)
-  #library(NLP)
+  library(quanteda)
+  library(NLP)
 
   # Create corpus object
   text_corpus <- corpus(x)
 
-  #require(openNLP)
-  #require(openNLPdata)
+  require(openNLP)
+  require(openNLPdata)
 
   # openNLP annotator objects
   sent_token_annotator <- openNLP::Maxent_Sent_Token_Annotator()
