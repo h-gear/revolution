@@ -57,8 +57,6 @@ rawdata <- rbind(fin_text, unf_text) %>%
     rename(TCP = id) %>%
     mutate(TCP = stringr::str_remove(TCP,".xml"))
 
-glimpse(rawdata)
-
 # remove dataframes
 rm(fin_text, unf_text)
 
@@ -68,8 +66,8 @@ ecco <- read.csv("data/raw/ecco/ECCOTCP.csv")
 ## merge ecco metadata with complete text ----
 ecco <- ecco %>% right_join(rawdata, by = "TCP")
 
-# Grouping by date, we can count how many documents are
-# available for each year, and plot these numbers
+# Grouping by date, we can count how many documents are available for each year,
+# and plot these numbers
 ecco %>%
     group_by(Date) %>%
     filter(Date > 1700 & Date < 1810) %>%
@@ -85,13 +83,10 @@ ecco <- ecco %>% mutate(text = tolower(text))
 saveRDS(ecco, file = "data/raw/ecco/ecco_3097.rds")
 #ecco <- readRDS(file = "data/raw/ecco/ecco_3097.rds")
 
-
 # 4. EXTRACT SENTENCE WITH PLACE OF PUBLICATION ----
 
 # search terms in text used to locate the place of publication
 target_words <- c("print", "printed")
-#target_words <- c("printed")
-#target_word_print <- c("print")
 
 # Function to extract surrounding words around target words
 extract_surrounding_words <- function(text, target_words) {
@@ -188,7 +183,7 @@ ecco$Date3 <- sapply(ecco$Date2, convertRomanToYear)
 # Replace 0 with NA
 ecco$Date3 <- ifelse(ecco$Date3 == 0, NA, ecco$Date3)
 
-# if date was empty but we have new information on date via the Roman numerals,
+# if date was empty but we obtained new information on date via the Roman numerals,
 # insert the year in date
 
 sum(is.na(ecco$Date)) # Check before: 624 dates missing
@@ -323,7 +318,8 @@ table(ecco2$place_of_publication)
 
 
 # 7. CLEANING PLACE OF PUBLICATION ----
-ukcities <- readLines("data/external/uk-towns-and-cities-a.txt") %>% as.data.frame() %>%
+ukcities <- readLines("data/external/uk-towns-and-cities-a.txt") %>%
+  as.data.frame() %>%
   rename(city = '.') %>%
   mutate(city = tolower(city))
 
@@ -332,7 +328,7 @@ pattern_cities <- paste0("(?i)(", paste0(ukcities$city, collapse = "\\b|\\b"), "
 ## some manual corrections ----
 ecco2 <- ecco2 %>%
     mutate(place_of_publication = ifelse(str_detect(surrounding_words_print, "new york") & place_of_publication == "york", "new york", place_of_publication),
-           place_of_publication = ifelse(str_detect(surrounding_words_print, "new castle") & place_of_publication == "castle", "new castle", place_of_publication),
+           place_of_publication = ifelse(str_detect(surrounding_words_print, "new castle") & place_of_publication == "castle", "newcastle", place_of_publication),
            place_of_publication = ifelse(str_detect(surrounding_words_print, "strawberry-hill") & place_of_publication == "hill", "strawberry-hill", place_of_publication),
            place_of_publication = ifelse(str_detect(surrounding_words_print, "london") & str_detect(place_of_publication,"london"), "london", place_of_publication),
            place_of_publication = ifelse(str_detect(surrounding_words_print, "dvblin"), "dublin", place_of_publication),
@@ -349,7 +345,7 @@ ecco2 <- ecco2 %>%
            place_of_publication = ifelse(grepl("adigonchester", place_of_publication, ignore.case = TRUE), "chester", place_of_publication),
            place_of_publication = ifelse(grepl("cambridge", place_of_publication, ignore.case = TRUE), "cambridge", place_of_publication),
            place_of_publication = ifelse(grepl("glasgow", place_of_publication, ignore.case = TRUE), "glasgow", place_of_publication),
-           place_of_publication = ifelse(grepl("newcastle", place_of_publication, ignore.case = TRUE), "new castle", place_of_publication),
+           place_of_publication = ifelse(grepl("newcastle", place_of_publication, ignore.case = TRUE), "newcastle", place_of_publication),
            place_of_publication = ifelse(grepl("castlecarlisle", place_of_publication, ignore.case = TRUE), "carlisle", place_of_publication),
            place_of_publication = ifelse(place_of_publication == "edin", "edinburgh", place_of_publication),
            place_of_publication = ifelse(place_of_publication == "edmunds", "st. edmunds", place_of_publication),
@@ -375,10 +371,21 @@ ecco2 <- ecco2 %>%
           "their","them","they","two","was","wearing",
           "were","who","by","de","great","high",
           "in","new","of","on","royal","the","tow",
-          "under","upon","with","worth"), NA, place_of_publication))
+          "under","upon","with","worth","eye",
+          "contributors"), NA, place_of_publication))
 
 
-sum(is.na(ecco2$place_of_publication)) #488
+ecco2 <- ecco2 %>%
+  mutate(place_of_publication = str_replace(place_of_publication, "perth", "london"),
+         place_of_publication = str_replace(place_of_publication, "tyne", "newcastle"),
+         place_of_publication = str_replace(place_of_publication, "new castle", "newcastle"),
+         place_of_publication = str_replace(place_of_publication, "vienna", "london")) %>%
+  mutate(place_of_publication = ifelse(place_of_publication == "bury", NA, place_of_publication),
+         place_of_publication = ifelse(place_of_publication == "windsor", NA, place_of_publication)) %>%
+  mutate(place_of_publication = str_replace(place_of_publication, "newcastle", "newcastle upon tyne"))
+
+
+sum(is.na(ecco2$place_of_publication)) #489
 
 table(ecco2$place_of_publication)
 
@@ -386,15 +393,39 @@ table(ecco2$place_of_publication)
 saveRDS(ecco2, file = "data/processed/ecco/ecco_preprocessed.rds")
 
 # 9. ADD COORDINATES ----
+world_cities <- read.csv("data/external/3_allcities.csv", sep = ';') %>%
+  as.data.frame() %>%
+  rename(city       = Name,
+         state      = Admin1.Code,
+         country    = Country.name.EN,
+         citynames  = Alternate.Names,
+         population = Population) %>%
+
+  mutate(city       = tolower(city),
+         state      = tolower(state),
+         country    = tolower(country),
+         citynames  = tolower(citynames)) %>%
+
+  # we'll focus on cities in Europe and North America
+  filter(str_detect(country, "united kingdom|ireland|france")) %>%
+  separate("Coordinates", c("latitude","longitude"), sep = " ",remove = F) %>%
+  select(city,state, country, latitude,longitude) %>%
+  filter(country != "") %>%
+  mutate(state = if_else(str_detect(state, "^[0-9]"), NA_character_, state)) %>%
+  rowwise() %>%
+  mutate(latitude  = as.numeric(gsub(",","",latitude)),
+         longitude = as.numeric(longitude)) %>%
+  distinct(city,state,country,.keep_all = TRUE)
+
 ## merge with longitude and latitude information
 ecco2 <- ecco2 %>%
-  left_join(city_coordinates,
-            by = c("city"    = "city",
-                   "state"   = "state",
-                   "country" = "country")) %>%
-  select(-timediff, -city_extraction, -first_sentence)
+  left_join(world_cities,
+            by = c("place_of_publication"    = "city")) %>%
+  mutate(state   = ifelse(place_of_publication == "philadelphia", "pennsylvania",state),
+         country = ifelse(place_of_publication == "philadelphia", "united states",country),
+         place_of_publication = ifelse(place_of_publication == " ", NA, place_of_publication),
+         place_of_publication = ifelse(place_of_publication == "tonquin", NA, place_of_publication),
+         place_of_publication = ifelse(place_of_publication == "westminster", "london", place_of_publication))
 
 # save results
-saveRDS(letter_ss, file = "data/processed/founders/letters_geo_ref.rds")
-
-# see code in FO how to merge coordinates with ecco2
+saveRDS(ecco2, file = "data/processed/ecco/ecco_geo_ref.rds")

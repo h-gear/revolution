@@ -17,6 +17,10 @@ here included scripts and analyses can be easily accomodated to include other le
 correspondence sources as well. Ultimately, this allows researchers to get a more complete picture
 of the fluxes in the political discourse during the American Revolution.
 
+### Documentation
+
+Here's the link to learn more about the project's background [background](BACKGROUND.md).
+
 ### KEYWORDS
 ShiCo, word vectors, natural language processing, text analysis, social network analysis
 
@@ -44,8 +48,6 @@ ShiCo, word vectors, natural language processing, text analysis, social network 
     │   ├── shico_evans     <- Evans Early American Imprints.
     │   └── shico_founders  <- Founders Online.
     │
-    ├── notebooks           <- Jupyter and/ or Rmd notebooks.
-    │
     ├── documentation       <- Data dictionaries, manuals, and all other explanatory materials.
     │
     ├── output              <- Generated analysis as HTML, PDF, LaTeX, etc.
@@ -60,7 +62,7 @@ ShiCo, word vectors, natural language processing, text analysis, social network 
     │   ├── 2. data_preparation          <- Data cleaning and preprocessing to enhance the data quality by organizing raw data in a suitable format.
     │   ├── 3. exploratory_data_analysis <- Getting a first and deeper understanding of the data.
     │   └── 4. analysis_and_modeling     <- Data analysis and modeling.
-    │   └── 5. deployment                <- Shiny Application.
+    │   └── 5. deployment                <- Geographical analysis.
     │   └── 6. functions                 <- Applied accross the project and sourced in the code.
     │
     ├── tests               <- Test files (for functions)
@@ -115,8 +117,15 @@ Give examples
 ## Setup and Installing
 
 Here, we give a step by step instructions that tell you how to get you up and running.
-The code is written in R and Python. For R, [*RStudio*](https://www.rstudio.com/) is recommended, while for Python, we
+The code is written mostly in R and parts in Python. For R, [*RStudio*](https://www.rstudio.com/) is recommended, while for Python, we
 recommend anaconda.
+
+To install hgear from GitHub repository, do:
+
+```console
+git clone git@github.com:https://github.com/h-gear/revolution.git
+cd revolution
+```
 
 First, Create a Conda/virtual environment.
 
@@ -138,18 +147,19 @@ This project is based on four datasets:
 - Founders Online
 - Delegates of Congress
 
-The data for ecco can be found here:
-The data for evans can be found here:
-The data for the Delegates of Congress can be found in this repository as part of the project:
-The data for the Founders Online can be found at: https://github.com/jaytimm/founders-online-corpus
-In addition, the data can also be found here: ......
+* The data for ecco can be found here:
+* The data for evans can be found here:
+* The data for the Delegates of Congress can be found in this repository as part of the project:
+* The data for the Founders Online can be found at: https://github.com/jaytimm/founders-online-corpus
 
-## Development
-Check out our [Contributing Guidelines] to get started with development.
+## Contributing
+
+If you want to contribute to the development of hgear, have a look at the [contribution guidelines](CONTRIBUTING.md).
 Please submit pull requests to us in case you want to participate. Suggestions, improvements, and edits are most welcome!
 
 ## License
-This project is licensed under the Apache License 2.0 - see the [LICENSE] file for details
+This project is licensed under the Apache License 2.0 - see the [licence](LICENSE.md) file for details.
+
 
 ## Links to data sources
 * Founders Online: https://founders.archives.gov/

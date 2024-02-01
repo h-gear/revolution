@@ -1310,4 +1310,4 @@ letter_ss <- letter_ss %>%
   #select(-timediff, -city_extraction, -first_sentence)
 
 # save results
-saveRDS(letter_ss, file = "data/processed/founders/letters_geo_ref.rds")
+saveRDS(letter_ss, file = "data/processed/founders/founders_geo_ref.rds")
