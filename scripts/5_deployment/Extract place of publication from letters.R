@@ -14,8 +14,6 @@
 # from other letters written by the same person within a specified time frame
 # (30 days) to obtain the most likely place of writing.
 
-# https://towardsdatascience.com/quick-guide-to-entity-recognition-and-geocoding-with-r-c0a915932895
-
 # 1. LIBRARIES ----
 library(tidyverse)
 library(data.table)
@@ -29,9 +27,9 @@ require(openNLPdata)
 
 # 2. LOAD PREPROCESSED FO LETTER DATA ----
 letter_ss <- readRDS(file = "data/processed/founders/ffc_preprocessed.rds") %>%
-  as.data.frame() %>%
+  as.data.frame()
   # TODO: remove this later to have the full dataset
-  slice(1:100)
+  #slice(100000:105000)
 
 # 3. EXTRACTING AND PREPROCESSING FIRST SENTENCE ----
 
@@ -41,85 +39,6 @@ letter_ss$first_sentence <- word(string = letter_ss$text,
                                  start  = 1,
                                  end    = 15,
                                  sep    = fixed(" "))
-
-# -----------------------------------------------------------------------------
-# test <- letter_ss$first_sentence %>% as.data.frame()
-#
-# #create a text string
-# full_text <- apply(test, 2, paste0, collapse=" ")
-#
-# #create sentence tokens
-# full_txt_sentence <- spacyr::spacy_tokenize(full_text, 'sentence')
-#
-# #create a df from the result
-# casentino_sentences <- as.data.frame(do.call(cbind,
-#                                              full_txt_sentence))
-#
-# #finding locations and adding a new column to the data frame
-# casentino_sentences$locations <- location_entity(casentino_sentences[,1])
-#
-# #add row number
-# casentino_sentences <- casentino_sentences %>%
-#   mutate(row = row_number())
-#
-# #creating a locations data frame with collapsed list: locations_df
-# locations_df  <- casentino_sentences %>%
-#   {.[!sapply(.$locations, is.null), ]} %>%
-#   unnest(locations) %>%
-#   select(c(locations, row))
-#
-# #create and clean distinct dataframe with counts: locs_dist
-# locs_dist <- locations_df %>% group_by(locations) %>% count()
-#
-# # some cleaning and examining the text is required remove non places
-# remove <- c("Dante", "Count", "Hell", "Jacob", "King Manfred", "Latin",
-#             "Middle", "Mother", "St", "La", "Sun", "St Romuald", "Etruscan")
-#
-# #add missing row
-# soci_missing <- c("Soci", NA)
-# locations_df <- rbind(locations_df, soci_missing)
-#
-# #filter out the unnecessary locations
-# locations_df <- locations_df %>% filter(!locations_df %in% remove)
-# locs_dist <- locations_df %>% group_by(locations) %>% count() #update the locs_dist df
-#
-# casentino_sentences <- casentino_sentences %>%
-#  rename(text ='.')
-#
-# #a function to populate the dataframe with all instances of a location
-# find_locs <- function(df, text_col, locations_vector)
-# {
-#   #create new column: new_locs
-#   df$new_locs <- NA
-#   #assigns list column
-#   df$new_locs <- list(NA)
-#   #create a grep search with the locs_dist locations column
-#   grep_paste <- paste(locations_vector, collapse = "|")
-#   #create a new list to store the results
-#   full_locs_list <- lapply(df[text_col], str_extract_all, grep_paste)
-#   #append list to dataframe
-#   df$new_locs <- full_locs_list$text
-#   #rename NA
-#   df$new_locs[df$new_locs=="character(0)"] <- NA
-#   #filters distinct values
-#   df <- df %>% distinct()
-#   return(df)
-# }
-#
-# #run the function
-# casentino_sentences <- find_locs(casentino_sentences, locs_dist$locations, text_col = "text")
-#
-# #remove the old location column
-# casentino_sentences <- casentino_sentences %>%
-#   dplyr::select(-locations) %>%
-#   unnest(new_locs)
-#
-# #populate missing cells in column
-# casentino_sentences <- casentino_sentences %>%
-#   group_by(new_locs) %>%
-#   fill(feature, .direction = "downup") %>%
-#   ungroup()
-# -----------------------------------------------------------------------------
 
 # letter_ss$first_sentence <- ifelse(is.na(letter_ss$first_sentence),
 #                                      letter_ss$content,
@@ -159,6 +78,7 @@ letter_ss$first_sentence <- gsub("[^a-zA-Z -]", "", letter_ss$first_sentence)
 # First, get all names from senders and receivers
 letter_ss <- letter_ss %>%
   mutate(sender_receiver_names = paste(authors, recipients, sep = " "),
+         # Remove all non-alphanumeric characters (excluding spaces)
          sender_receiver_names = gsub("[^a-zA-Z0-9 ]", "", sender_receiver_names),
          # Remove all words that are shorter than 2 characters
          sender_receiver_names = str_replace_all(sender_receiver_names, "\\b\\w{1}\\b", "")
@@ -166,10 +86,14 @@ letter_ss <- letter_ss %>%
 
 # remove words from first_sentence that occur in sender_receiver_names
 remove_names_from_first_sentence <- function(x, y) {
+
+    # a vector of words in the first sentence
     words_to_remove <- str_split(x, "\\s+")[[1]]
     pattern         <- paste0("\\b", words_to_remove, "\\b", collapse = "|")
 
-    str_replace_all(y, pattern, "")
+    # replace all occurrences of the pattern in first_sentence with an empty string
+    y <- str_replace_all(y, pattern, "")
+    return(y)
 }
 
 # Applying the function
@@ -183,7 +107,8 @@ letter_ss <- letter_ss %>%
 source("scripts/functions/pos_tag.R")
 
 # Remove empty first sentences
-letter_ss <- letter_ss %>% filter(!is.na(first_sentence))
+letter_ss <- letter_ss %>%
+  filter(!is.na(first_sentence) & first_sentence != "")
 
 # Perform POS tagging on the first sentence
 letter_ss$city_extraction <- pos_tag(letter_ss$first_sentence,
@@ -334,7 +259,7 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "recieve","lord","secretary","transmitting","transmitted","transmit",
                "esteemed","esteem","mention","submitted","submit","submitting",
                "personally","person","personage","personages","personage’s",
-               "department","addressing","addressed","address","proposing",
+               "addressing","addressed","address","proposing",
                "propose","proposed","proposes","respect","respecting","respects",
                "respected","dated","date","dated","dates","newspaper",
                "proceedings","herewith","directed","forget","forgot","forgotten",

@@ -1,4 +1,4 @@
-# Historiographing the Era of the American Revolution <img src="documentation/img/logo.jpg" width="120" align="right" />
+# Historiographing the Era of the American Revolution
 
 <!--[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)-->
 
@@ -9,6 +9,16 @@
 [![Issues][issues-shield]][issues-url]
 [![Apache License][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
+
+<!-- PROJECT LOGO -->
+<br />
+<div align="center">
+      <img src="documentation/img/logo.jpg" alt="Logo" 
+      width="400" height="280">
+
+<br />
+<br />
+<div align="left">
 
 <!-- TABLE OF CONTENTS -->
 <details open>
@@ -46,16 +56,14 @@ correspondence networks, we are able to measure how networks of communication wi
 Founders Online corpus shaped the character, distribution, and spread of political ideas 
 during the Revolutionary era. This project and associated analyses offer powerful new methods
 for addressing longstanding debates in the field of early American history. Also, by 
-means of additional collected data (i.e., the Letters of Delegates to Congress), we show how the 
+means of additional collected data, we show how the 
 here included scripts and analyses can be easily accomodated to include other letter
 correspondence sources as well. Ultimately, this allows researchers to get a more complete picture
 of the fluxes in the political discourse during the American Revolution.
 
-The project integrates (dynamic) topic analysis, word2vec-based shico results, and temporal social network analysis, in addition
-to providing geographical insights into the spreading of political ideas.
 
 ### Documentation
-Here's the link to learn more about the project's background [background](BACKGROUND.md).
+Here's the link to learn more about the project's [background](BACKGROUND.md).
 
 ## Project Organization
 
@@ -93,7 +101,8 @@ Here's the link to learn more about the project's background [background](BACKGR
     ├── tests               <- Test files (for functions)
    
 
-### Structure of analysis
+
+
 The project is organized according to a data science structure covering all the phases from data acquisition to deployment: 
 
 <img src="documentation/img/Data science lifecycle overview.jpg" />
@@ -113,8 +122,7 @@ git clone git@github.com:https://github.com/h-gear/revolution.git
 
 ### Installation
 Here, we give a step by step instructions that tell you how to get you up and running.
-The code is written mostly in R and parts in Python. For R , [*RStudio*](https://posit.co/download/rstudio-desktop/) is recommended, while for Python, we
-recommend [*anaconda*](https://www.anaconda.com/download).
+The code is written mostly in R and parts in Python. For R , [*RStudio*](https://posit.co/download/rstudio-desktop/) is recommended, while for Python, we recommend [*anaconda*](https://www.anaconda.com/download).
 
 
 #### **R: Setting up the Virtual Environment with venv**
@@ -149,6 +157,7 @@ venv::deactivate()
 ```
 
 #### **Python: Setting up a Virtual Environment**
+We recommend installing hgear in a new virtual environment to avoid dependency conflicts.
 
 Run the following commands to create a virtual environment:
 For _Windows_:
@@ -219,7 +228,7 @@ If you want to contribute to the development of hgear, have a look at the [contr
 Please submit pull requests to us in case you want to participate. Suggestions, improvements, and edits are most welcome!
 
 ## License
-This project is licensed under the Apache License 2.0 - see the [licence](LICENSE.md) file for details.
+This project is licensed under the Apache License 2.0 - see the [licence](LICENSE.md) file for details. This means that this project can be used, modified and redistributed for free, even for commercial purposes.
 
 ## Other sources
 
@@ -233,7 +242,7 @@ This project is licensed under the Apache License 2.0 - see the [licence](LICENS
 * Shico deployment: https://github.com/c-martinez/ShiCo-deploy
 
 ## Contact
-If you find any bugs or experience difficulties when using the code in this project, please create a issue on this Github page. If you have any specific questions with respect to our research, or methodology used, please email Thijs Vroegh **t.vroegh@esciencecenter.nl**
+If you find any bugs or experience difficulties when using the code in this project, please create a issue on this Github page. If you have any specific questions with respect to our research, or methodology used, please email Thijs Vroegh t.vroegh@esciencecenter.nl
 
 ## Authors
 - [Thijs Vroegh](https://www.esciencecenter.nl/team/thijs-vroegh/)
@@ -246,7 +255,7 @@ This code has been used in the upcoming research article:
 Please cite if you use it. You can do this easily with one of these options:
 
 - The `cite this repository` menu in the right tab.
-- The [citation file](./CITATION.cff).
+- The [citation file](CITATION.cff).
 - If you prefer to copypaste, here you have the APA and BibTex strings:
 
 `Vroegh, T. h-gear [Computer software]. https://github.com/h-gear/revolution`
@@ -256,8 +265,7 @@ Please cite if you use it. You can do this easily with one of these options:
 `@software{Vroegh_hgear,author = {Vroegh, Thijs},license = {Apache 2.0},title = {{h-gear}},url = {https://github.com/h-gear/revolution}}`
 
 ## Acknowledgments
-Our thanks go out to the authors that open-sourced their code, enabling us to create this project that can hopefully be of service to many. Particularly, we like to thank
-the following people:
+This code is being developed by the Netherlands eScience Center in collaboration with the faculty of of American Studies at the University of Groningen. Our thanks go out to the authors that shared or open-sourced their code, enabling us to create this project that can hopefully be of service to many. Particularly, we like to thank the following people:
 * Thomas Hoekstra
 * Finn-Ole Höner
 * Cristian A. Marocico

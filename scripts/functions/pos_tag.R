@@ -35,7 +35,7 @@
 #' pos_tag(x = sentence, pos_filter = c("NNP"))
 #' @export
 #'
-pos_tag <- function(x, pos_filter = c("NNP", "NNPS", "NN", "NNS")){
+pos_tag <- function(x, pos_filter = c("NNP", "NNPS", "NN", "NNS")) {
 
   options(stringsAsFactors = FALSE)
   library(quanteda)
@@ -57,24 +57,30 @@ pos_tag <- function(x, pos_filter = c("NNP", "NNPS", "NN", "NNS")){
     pos_tag_annotator
   )
 
-  #function for annotation
+  # Function for annotation
   annotateDocuments <- function(doc, pos_filter = NULL) {
     doc <- as.String(doc)
-    doc_with_annotations <- NLP::annotate(doc, annotator_pipeline)
 
-    tags   <- sapply(subset(doc_with_annotations, type == "word")$features, `[[`, "POS")
-    tokens <- doc[subset(doc_with_annotations, type == "word")]
+    tryCatch({
+      doc_with_annotations <- NLP::annotate(doc, annotator_pipeline)
 
-    if (!is.null(pos_filter)) {
-      res <- tokens[tags %in% pos_filter]
-    } else {
-      res <- paste0(tokens, "_", tags)
-    }
-    res <- paste(res, collapse = " ")
-    return(res)
+      tags   <- sapply(subset(doc_with_annotations, type == "word")$features, `[[`, "POS")
+      tokens <- doc[subset(doc_with_annotations, type == "word")]
+
+      if (!is.null(pos_filter)) {
+        res <- tokens[tags %in% pos_filter]
+      } else {
+        res <- paste0(tokens, "_", tags)
+      }
+      res <- paste(res, collapse = " ")
+      return(res)
+    }, error = function(e) {
+      # Print the error and the row where it occurred
+      cat("Error in row:", which(as.character(text_corpus) == doc), "\n")
+      stop(e)
+    })
   }
 
-  # return filtered corpus
+  # Return filtered corpus
   return(sapply(as.character(text_corpus), annotateDocuments, pos_filter = pos_filter))
 }
-

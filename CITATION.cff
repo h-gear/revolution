@@ -1,0 +1,18 @@
+# YAML 1.2
+---
+cff-version: "0.0.1"
+title: "Historiographing the Era of the American Revolution"
+authors:
+  - family-names: Vroegh
+    given-names: Thijs
+    orcid: "https://orcid.org/0000-0002-6311-0798"
+date-released: 
+doi: 
+version: "0.0.1"
+repository-code: "https://github.com/h-gear/revolution"
+keywords:
+  - american revolotion
+  - shifting concepts in time
+  - temporal social network analysis
+message: "If you use this software, please cite it using these metadata."
+license: Apache-2.0

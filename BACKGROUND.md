@@ -22,6 +22,9 @@ ShiCo, word vectors, natural language processing, text analysis, social network 
 - Can we identify specific moments in time and places where these shifts are particularly prominent?  
 
 ### METHODS
+The project integrates (dynamic) topic analysis, word2vec-based shico results, and temporal social network analysis, in addition
+to providing geographical insights into the spreading of political ideas.
+
 <img src="documentation/img/hgear overview2.jpg" />
 
 ### SHIFTING CONCEPTS IN TIME (SHICO)
