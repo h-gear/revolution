@@ -6,11 +6,11 @@
 .RDS
 .Rbuildignore
 
-# To do list
-TODO.md
-
 # Ignore R's renv-related files
 renv/
+
+# Ignore shico w2v models
+shico_models/
 
 # Ignore packages.txt
 packages.txt
