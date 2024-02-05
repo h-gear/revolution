@@ -1,1 +1,2 @@
-# This folder contains code for model deployment
+# This folder contains code for the geographical analysis, i.e. geocoding of the founders online letters. In addition, code is provided to
+ make an animated wordcloud, to be used as an alternative to shico.

@@ -11,10 +11,6 @@ here included scripts and analyses can be easily accomodated to include other le
 correspondence sources as well. Ultimately, this allows researchers to get a more complete picture
 of the fluxes in the political discourse during the American Revolution.
 
-### Documentation
-
-Here's the link to the project's background [background](BACKGROUND.md).
-
 ### KEYWORDS
 ShiCo, word vectors, natural language processing, text analysis, social network analysis
 
@@ -24,3 +20,9 @@ ShiCo, word vectors, natural language processing, text analysis, social network 
 - How did these ideas on political ideologies spread accross the network of interconnected people?
 - What was the role of each of the founding fathers in terms of how they spread information?
 - Can we identify specific moments in time and places where these shifts are particularly prominent?  
+
+### METHODS
+<img src="documentation/img/hgear overview2.jpg" />
+
+### SHIFTING CONCEPTS IN TIME (SHICO)
+ 

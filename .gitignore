@@ -9,6 +9,15 @@
 # To do list
 TODO.md
 
+# Ignore R's renv-related files
+renv/
+
+# Ignore packages.txt
+packages.txt
+
+# Virtual environment
+.venv
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
