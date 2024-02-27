@@ -49,15 +49,15 @@ path_to_results = '../../output/figures/'
 
 # Loading the letter data on liberal politics or on republican politics. Both datasets
 # are homogenous subsets of the original dataset. The original dataset contains letters
-# of writers on a large variety of topics. Using either the results from
+# of writers on a large variety of topics. We can use either the results from:
 # 
-# 1) the shico analysis through word counts or 
-# 2) topic analysis
+# 1) the shico analysis through word counts
+# 2) semi-supervised topic analysis
 #
-# We select those letters that are centered on a specific political ideology, either by filename or by 
-# selecting the approapriate topic number 
+# We select those letters that are centered on a specific political ideology, either by 
+# filename or by selecting the appropriate topic number. 
 
-# If 1) 
+# If 1) SHICO ---- 
 # Run the following analysis separatedly on either 'links_liberal' or 'links_republican'
 # select dataset: liberal or republican
 ideology = "_" + "republican"
@@ -66,18 +66,23 @@ file_path = path_to_data + 'links{}.csv'.format(ideology)
 links = pd.read_csv(file_path)
 display(links.head())
 
-# If 2) 
+# If 2) TOPIC ANALYSIS ----
 file_path = path_to_data + 'letters_with_topic_info.csv'
 
 # read in all letters
 letters = pd.read_csv(file_path)
+display(letters.head(3))
 
 # make subset of letters using topic columnn as a document-level variable indicating to which topic a letter belongs
-links = letters[letters['topic'] == 1]  # 1 = liberal, 2 = republican, etc..
+#links = letters[letters['topic'] == "01_Liberal politics"] 
+links = letters[letters['topic'] == "02_Republican politics"] 
 display(links.head())
 
+links.info()
+
 # amount of letters
-len(links.index)
+len(links.index)  # "01_Liberal politics": ca. 2265
+                  # "02_Republican politics": ca. 5781
 
 # Drop links without a sending date
 data = links[['sender_id', 'receiver_id', 'sending_date']]
@@ -590,12 +595,12 @@ sns.histplot(data=path_freqs, x="path_lengths", stat="probability", kde=True, di
              line_kws = {'linewidth':'2'})
 
 # Customize Axes
-ax.set_xticks([1] + list(range(10, 76, 10)))
-ax.set_xticklabels([1] + list(range(10, 76, 10)), fontsize=14)
-ax.set_xlim(0, 75)
+ax.set_xticks([1] + list(range(10, 15, 10)))
+ax.set_xticklabels([1] + list(range(10, 15, 10)), fontsize=14)
+ax.set_xlim(0, 15)
 ax.set_xlabel('Path lengths', fontsize=16, fontweight='bold')
-ax.set_yticks(np.linspace(0, 0.16, 9))
-ax.set_yticklabels(np.linspace(0, 16, 9), fontsize=14)
+ax.set_yticks(np.linspace(0, 0.5, 9))
+ax.set_yticklabels(np.linspace(0, 50, 9), fontsize=14)
 ax.set_ylabel('Percentage', fontsize=16, fontweight='bold')
 ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)

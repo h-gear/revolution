@@ -1,14 +1,13 @@
 # 0. GOAL ----
 # Retrieve the place where the letter was written and get its geographical
-# coordinates. Then, the letters will be plotted on a map through time in a
-# shiny app, allowing to compare it with central hubs of other writings.
-# The place of writing is often but not always mentioned in the letter.
+# coordinates. Then, the letters will be plotted on a map. This geodata
+# allows to find central hubs of writings. Also, with this information we can
+# make subgroups of letters based on geographical location, and examine whether
+# there are different ideas mentioned in the letters. For example, we can
+# compare the letters written in the US with those in Europe, or those written
+# in the same city but in different years.
 
-# With this information, we can make subgroups of letters based on geographical
-# location, and examine whether there are different ideas mentioned in the
-# letters. For example, we can compare the letters written in the US with those
-# in Europe, or those written in the same city but in different years. One
-# problem: there are a lot of cities with the same name in different states or/
+# There are a lot of cities with the same name in different states or/
 # and in different countries. If the place of writing is missing in the letter or
 # cannot be clearly specified, this script tries to extract the place of writing
 # from other letters written by the same person within a specified time frame
@@ -27,9 +26,8 @@ require(openNLPdata)
 
 # 2. LOAD PREPROCESSED FO LETTER DATA ----
 letter_ss <- readRDS(file = "data/processed/founders/ffc_preprocessed.rds") %>%
-  as.data.frame()
-  # TODO: remove this later to have the full dataset
-  #slice(100000:105000)
+  as.data.frame() %>%
+  slice(1:1000)
 
 # 3. EXTRACTING AND PREPROCESSING FIRST SENTENCE ----
 
@@ -40,17 +38,13 @@ letter_ss$first_sentence <- word(string = letter_ss$text,
                                  end    = 15,
                                  sep    = fixed(" "))
 
-# letter_ss$first_sentence <- ifelse(is.na(letter_ss$first_sentence),
-#                                      letter_ss$content,
-#                                      letter_ss$first_sentence)
-
-# Extract text between [ and ] and put it in a new column
+# Extract text between [ and ] and put it in a separate column
 letter_ss$location <- str_extract(letter_ss$first_sentence, "\\[(.*?)\\]")
 letter_ss$location <- gsub("[0-9]", "", letter_ss$location)
 letter_ss$location <- tolower(letter_ss$location)
 letter_ss$location <- gsub("[^a-zA-Z -]", "", letter_ss$location)
 
-# add spaces around commas, replace long dash with space, add spaces after 'Sir'
+# Add spaces around commas, replace long dash with space, add spaces after 'Sir'
 add_spaces_and_replace <- function(text) {
   # Replace comma with space around it
   text <- gsub(',', ' , ', text)
@@ -70,12 +64,21 @@ letter_ss$first_sentence <- sapply(letter_ss$first_sentence, add_spaces_and_repl
 # Remove all special characters in first sentence except space, dash
 letter_ss$first_sentence <- gsub("[^a-zA-Z -]", "", letter_ss$first_sentence)
 
-# remove names from senders and receivers when they occur in the first sentence.
-# The remove_words_in_y function splits the words in sender_receiver_names,
-# constructs a regular expression pattern, and then removes those words from the
-# first_sentence, thereby further reducing the string
+## 1. Remove sender and receiver names from first sentence ----
+# We split the words in sender_receiver_names, constructs a regular
+# expression pattern, and then removes those words from the first_sentence if
+# present, thereby further reducing the string and removing irrelevant nouns
 
-# First, get all names from senders and receivers
+num_cores <- parallel::detectCores()
+cat("Number of CPU cores:", num_cores, "\n")
+
+# Set up the multisession plan
+plan(multisession, workers = num_cores - 1)
+
+print("Start")
+tic <- Sys.time()
+
+# Get all names from senders and receivers
 letter_ss <- letter_ss %>%
   mutate(sender_receiver_names = paste(authors, recipients, sep = " "),
          # Remove all non-alphanumeric characters (excluding spaces)
@@ -84,52 +87,81 @@ letter_ss <- letter_ss %>%
          sender_receiver_names = str_replace_all(sender_receiver_names, "\\b\\w{1}\\b", "")
   )
 
-# remove words from first_sentence that occur in sender_receiver_names
-remove_names_from_first_sentence <- function(x, y) {
+# Remove names from first_sentence that occur in sender_receiver_names
+remove_names_from_first_sentence <- function(names, sentence) {
 
-    # a vector of words in the first sentence
-    words_to_remove <- str_split(x, "\\s+")[[1]]
-    pattern         <- paste0("\\b", words_to_remove, "\\b", collapse = "|")
+  # Split the names into individual words
+  words_to_remove <- unlist(str_split(names, "\\s+"))
 
-    # replace all occurrences of the pattern in first_sentence with an empty string
-    y <- str_replace_all(y, pattern, "")
-    return(y)
+  # Create a pattern for removing names
+  pattern <- paste0("\\b", paste0(words_to_remove, collapse = "\\b|\\b"), "\\b")
+
+  # Compile the regex pattern for better performance
+  regex_pattern <- str_replace_all(pattern, fixed(" "), ".*?")
+
+  # Replace all occurrences of the pattern in the sentence with an empty string
+  cleaned_sentence <- str_replace_all(sentence, regex_pattern, "")
+
+  return(cleaned_sentence)
 }
 
-# Applying the function
+# Parallelise the process of removing names
 letter_ss <- letter_ss %>%
-  mutate(first_sentence = remove_names_from_first_sentence(sender_receiver_names, first_sentence)) %>%
-  select(-sender_receiver_names)
+  mutate(
+    first_sentence = future_map2(
+                .x = sender_receiver_names,
+                .y = first_sentence,
+                .f = remove_names_from_first_sentence,
+         .progress = TRUE
+    )
+  )
 
-## 2. Part-of-speech tagging ----
+toc <- Sys.time()
+print(paste0("Removing the names took ", round(toc - tic, digits = 2),"seconds"))
 
+# Explicitly stop parallel processing
+plan("sequential")
+
+# Applying the function
+#letter_ss <- letter_ss %>%
+#  mutate(first_sentence = remove_names_from_first_sentence(sender_receiver_names, first_sentence)) #%>%
+  #select(-sender_receiver_names)
+
+## 3. Part-of-speech tagging ----
 # Placenames generally belong to the category NNP (proper noun, singular)
 source("scripts/functions/pos_tag.R")
 
-# Remove empty first sentences
+# Remove empty, or very small first sentences
 letter_ss <- letter_ss %>%
-  filter(!is.na(first_sentence) & first_sentence != "")
+  filter(!is.na(first_sentence) &
+           str_length(str_trim(first_sentence)) > 0 &
+           str_trim(first_sentence) != "") %>%
+  mutate(first_sentence = str_squish(first_sentence)) %>%
+  filter(str_count(str_trim(first_sentence), "\\S+") >= 5
+  )
 
-# Perform POS tagging on the first sentence
-letter_ss$city_extraction <- pos_tag(letter_ss$first_sentence,
-                                     pos_filter = c("NNP"))
-
+# POS tagging on the first sentence
+letter_ss$city_extraction <- pos_tag(letter_ss$first_sentence, pos_filter = c("NNP"))
 letter_ss$first_sentence  <- tolower(letter_ss$first_sentence)
 letter_ss$city_extraction <- tolower(letter_ss$city_extraction)
 
-# remove frequently occurring words that are not relevant for retrieving city
+# Remove frequently occurring words that are not relevant for retrieving city
 # and state name. This makes the string to search in much shorter!
 bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "august","september","october","november","december", "duplicate",
                "janry", " jany","febry", "feby","decr", "octr", "octobr","rogers",
-               " februar", "monday","tuesday", "wednesday", "thursday", "friday", "saturday",
+               " februar", "monday","tuesday", "wednesday", "thursday", "friday",
+               "saturday", "letter not found from", "document not found","fryday",
                "sunday","1st","2nd","3rd","4th","5th","6th","7th", "7nd","8th",
                "9th","10th","11th", "12th","13th","14th","15th","16th","17th",
                "18th","19th","20th","21st","22th","22nd","23th","23rd","24th",
                "25th","26th","27th","28th", "29th","30th","31th","31st", "22d",
-               "maj gen", "most excellent", "morning","to the president of the united states",
-               "the president of the united states","president of the united states","my best friend","most dear sir",
-               "my dear son", "my dear grandson","may it please your excellency","my very dear friend",
+               "maj gen", "most excellent", "morning","waggons","waggon",
+               "to the president of the united states","independant","independent",
+               "the president of the united states",
+               "president of the united states","my best friend","most dear sir",
+               "my dear son", "my dear grandson","may it please your excellency",
+               "my very dear friend",
                "not found from", "my dear friend and kinsman", "my dear george",
                "my dear louisa", "my dearest louisa", "jonathan glover","humble",
                "general washington","william washington", "betty washington",
@@ -166,7 +198,8 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "copies","my lord", "page","office","agency","inclosing","i am",
                "mother", "papa","mamma","grandpapa","cousin","honoured","parents",
                "sister","brother","father","hond","madam","uncle","aunt", "honourd",
-               "honorable", "honored","honord", "the honor", "honor", "letters","news","contract",
+               "honorable", "honored","honord", "the honor", "honor", "letters",
+               "news","contract","honours"," yrself",
                "decemr", "my dearest","my dear", "dear","my dearest friend",
                "dearest","friend"," friendly","beloved","wife","james clinton",
                "george clinton","henry clinton", "general clinton",
@@ -184,17 +217,21 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "upon reading"," zebedee redding","philip van rensselaer",
                "joseph spencer", "oliver spencer","sterling complains","temple",
                "thornton","knox  baillie", "edward snickers","from the green",
-               "bradford", "jonathan trumbull","joseph trumbull","john west", "lodge",
+               "bradford", "jonathan trumbull","joseph trumbull","john west",
+               "lodge","ensign", "recruit", "assisting","assist",
                "to governors trumbull greene  weare","verite union","union",
                "vergennes", "walpole","william woodford"," instructs woodford",
                "receivd", "received","favours", "mail","written", "wrote",
                "writing", "writings", "writen", "writings", "history","glad",
                "common","acknowleged","acknowlege","acknowledgd","acknowledged",
                "acknowledges","marquis","james madison", "general	stirling",
-               "valentine", "todd", "john dickinson","day"," congress","daniel smith",
+               "valentine", "todd", "john dickinson","day"," congress",
+               "daniel smith", " bearer", "mercer","decem",
                "philip", "william trent","hope", "anthony white","imperial",
-               "saml cook", "john sullivan","sullivan","the colony", "moore", "lord stirling",
-               "camp", "pray","william ramsay",	"alexander mcdougall", "william bartlett",
+               "saml cook", "john sullivan","sullivan","the colony", "moore",
+               "lord stirling","invoice","doctor","stephens","consulting","consult",
+               "camp", "pray","william ramsay",	"alexander mcdougall",
+               "william bartlett","editorial","commissary","genl",
                "council","william cushing","george gregory", "liberty", "quarters",
                "henry babcock", "jones",  "joseph reed","joseph","lee", "arnold",
                "stephen","esqr","esq", "head", "qrs", "before", "evening",
@@ -204,7 +241,7 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "officers","augt","octbr","happy", "delivery","acknowledge",
                "septemr","septembr","sepr","return","pleasure","commissioners",
                "messenger","beg","leave","octbr","nights","octor",
-               "extract","miles","baron","material"," governor","write",
+               "extract","miles","baron","material","governor","write",
                "wrote","writing","enclosed","resolves"," doctor","congress",
                "enclosd","background","conversations","honour","augst",
                "lieut","wheaton","informed","informs","inform", "inclose",
@@ -218,7 +255,8 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "barton","meredith","morgan","colo varick","spencer","paterson",
                "hammond","russell","jackson","girard","le roy","god","eliot",
                "taylor", "carroll","wayne","parker","sherman","novbr",
-               "stoddard","edwards","stark","replying","monroe","request","trumbull",
+               "stoddard","edwards","stark","replying","monroe","request",
+               "trumbull","captn", "commissioner","agent"," weekly", "monthly",
                "major", "steuben"," febr","indians","attacked","receipt"," glover",
                "gratz","greene","hancock","mckean","hugh mercer","james mercer",
                "dubois","ogden","returned","intended", "passing","thro",
@@ -226,11 +264,13 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "enclose","encloses","ware bound","whately","franklins",
                "sir", "mr", "letter", "dear", "dr","dr—", "mrs", "pd", "sr",
                "january", "february", "march", "april", "may", "june", "july",
-               "august", "september","october","november","december", "decbr", "thos",
+               "august", "september","october","november","december", "decbr",
+               "thos","royal","society","esquire"," instructions","ensign",
                "b","c","p","h","go", "aug", "sept","oct","nov","dec", "janry",
                "jany","febry", "feby", "decr", "octr", "octobr","jan",
-               "wm","tis", "ca","gw", "novr","monday","tuesday", "wednesday",
-               "thursday", "friday", "saturday","saturdays","sunday", "octo", "novemr",
+               "wm","tis","ca","gw", "novr","monday","tuesday", "wednesday",
+               "thursday", "friday", "saturday","saturdays","sunday", "octo",
+               "novemr","assemblys","regiment","commanding", "officer",
                "1st","2nd","3rd","4th","5th","6th","7th", "7nd","8th","9th",
                "10th","11th","12th","13th","14th","15th","16th","17th","decm",
                "18th","19th","20th","21st","22th","22nd","23th","23rd","septm",
@@ -245,14 +285,15 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "without","two","us","yet","since","also","therefore",
                "however","never","ever","soon","say","take","give","well",
                "see","mch","sir","mr","mr.","get","give","want","many",
-               "part","time", "wh","ditto","day","letter","esqr","mrs",
+               "part","time", "wh","ditto","day","letter","mrs",
                "letter","day","person","post","purpose","measure","answer",
                "mat","subject","circumstance","manner","moment","gentleman",
-               "yesterday","instant","pa","week","par","night","event",
-               "object","paper","month","favour","favor","favored", "reason","regard",
+               "yesterday","instant","week","par","night","event","gentlmen",
+               "object","paper","month","favour","favor","favored", "reason",
+               "regard","hble","vessel","hamilton","soldiers","speaker",
                "principle","matter","instance","question","time","inst","favorable",
                "degree","","occasion","honble","hour","behalf","particular",
-               "van","word", "correspondence","issue","lettre","mr","printing",
+               "van","word", "correspondence","issue","lettre","printing",
                "ladies","recd","yr favr","favr"," favors","considered","proposal",
                "delivered","deliver","trouble","communicated","communicate",
                "announcing","announced","announces","announcing","announced",
@@ -282,9 +323,9 @@ bad_words <- c("january", "february", "march", "april", "may", "june", "july",
                "captain","commandant","exellency"," edward", "coles",
                "introduces","clark","meeting","colony","samuel chase",
                "roman","catholic church","connor"," mayor", "cutler",
-               "claiborne","parke custis","america","treasury","revenue",
+               "claiborne","parke custis","america","revenue",
                "general","james cook","enemy","count","minister",
-               "honors")
+               "honors","cook")
 
 all_stop_words <- c(quanteda::stopwords("en"),
                     stopwords::stopwords(source ="snowball"),
@@ -314,7 +355,7 @@ letter_ss$first_sentence  <- str_squish(letter_ss$first_sentence)
 # 4. CITY NAMES AND COORDINATES ----
 
 ## A) All us-cities before 1835 ----
-# https://query.wikidata.org/
+# From https://query.wikidata.org/
 us_historical_cities <- read.csv("data/external/1_uscities_till1835.csv", sep = ',') %>%
   as.data.frame() %>%
   rename(city        = sLabel,
@@ -332,7 +373,7 @@ us_historical_cities <- read.csv("data/external/1_uscities_till1835.csv", sep = 
   select(city,state,country,latitude,longitude)
 
 ## B) All currently-existing US cities with population > 1000 ----
-# data taken from https://public.opendatasoft.com/explore/dataset/geonames-all-cities-with-a-population-1000/information/?disjunctive.cou_name_en&sort=name
+# From https://public.opendatasoft.com/explore/dataset/geonames-all-cities-with-a-population-1000/information/?disjunctive.cou_name_en&sort=name
 all_us_cities <- read.csv("data/external/2_us_cities.csv", sep = ',') %>%
   as.data.frame() %>%
   rename_with(tolower) %>%
@@ -345,8 +386,8 @@ all_us_cities <- read.csv("data/external/2_us_cities.csv", sep = ',') %>%
   select(city,state,country,latitude,longitude)
 
 
-## C) All cities in the world ----
-# data taken from xxxx TODO
+## C) All cities in the world with a population > 1000 ----
+# From https://public.opendatasoft.com/
 world_cities <- read.csv("data/external/3_allcities.csv", sep = ';') %>%
   as.data.frame() %>%
   rename(city       = Name,
@@ -389,7 +430,6 @@ city_coordinates <- rbind(us_historical_cities,
   distinct(city,state,country,.keep_all = TRUE)
 
 # 5. MATCHING CITIES IN THE LETTERS ----
-
 # We first extract the city-name, regardless for the moment whether there are
 # duplicates or not. We'll deal with that later in the script
 
@@ -632,7 +672,7 @@ letter_ss <- letter_ss %>%
                           str_detect(city_extraction, "mt washington") ~ "mount washington",
                           str_detect(city_extraction, "worcester township") ~ "worcester township",
                           str_detect(city_extraction, "n york") ~ "new york",
-                          str_detect(city_extraction, "york town") ~ "york town",
+                          str_detect(city_extraction, "york town") ~ "yorktown",
                           str_detect(city_extraction, "highlands") ~ "highlands",
                           str_detect(city_extraction, "new windsor") ~ "new windsor",
                           str_detect(city_extraction, "new haven") ~ "new haven",
@@ -789,8 +829,6 @@ letter_ss <- letter_ss %>%
                           str_detect(city_extraction, "newcastle tyne") ~ "newcastle on tyne",
                           str_detect(city_extraction, "mt airy") ~ "mount airy",
                           str_detect(first_sentence, "scituate") ~ "scituate",
-
-
                           .default = NA_character_))
 
 # save results
@@ -815,7 +853,7 @@ extract_city <- function(city_extraction, city) {
   return(city)
 }
 
-# Use furrr to parallelise the mutate operation
+# Parallelise the city extraction process
 letter_ss <- letter_ss %>%
   mutate(
     city = future_map2(
@@ -838,12 +876,17 @@ letter_ss <- letter_ss %>%
 
 # save results
 saveRDS(letter_ss, file = "data/interim/geo_extraction.rds")
-letter_ss <- readRDS("data/interim/geo_extraction.rds") # city only
+#letter_ss <- readRDS("data/interim/geo_extraction.rds") # city only
+
+city_table <- table(letter_ss$city)
+# Filter out occurrences with a minimum frequency of 6
+filtered_city_table <- city_table[city_table >= 10]
+
 
 ## B) Extract us-state name ----
 
-#In 1835, there were only 24 U.S. states. We look for both state abbreviations
-# and full state names
+#In 1835, there were only 24 U.S. states.
+# We look for full state names and state abbreviations
 state_names <- c("delaware", "pennsylvania", "new jersey", "georgia", "connecticut",
                  "massachusetts", "maryland", "south carolina", "new hampshire",
                  "virginia", "new york", "north carolina", "rhode island", "vermont",
@@ -875,16 +918,15 @@ state_patterns <- paste0("(?i)\\b(", paste0(c(state_abbreviations,
                                               state_abbreviations_common_3_4,
                                               state_names), collapse = "|"), ")\\b")
 
-# Extract state information from location variable, i.e., the information between
-# brackets in the original text
+# Extract state information from location variable, i.e., the information
+# between brackets in the original text
 letter_ss$state <- str_extract(letter_ss$location, state_patterns)
 
 # Next, we remove state information from location variable
 letter_ss$location <- mapply(function(loc, st) gsub(paste0(",?\\s*", st, "\\s*"), "", loc),
                              letter_ss$location, letter_ss$state)
 
-# Next, we look for information in city extraction variable.
-
+# Next, we look for information in city extraction variable
 state_abbreviations <- c("pa", "nj",
                          "ga", "ct", "md",
                          "sc", "nh", "ny",

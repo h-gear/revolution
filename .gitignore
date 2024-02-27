@@ -10,7 +10,10 @@
 renv/
 
 # Ignore shico w2v models
-shico_models/
+w2v_models/delegates/raw
+
+# Ignore raw output
+output/figures/topic_analysis
 
 # Ignore packages.txt
 packages.txt

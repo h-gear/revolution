@@ -1,32 +1,29 @@
 #                               Script header ----
 #' =============================================================================
-#' Title: Topic analysis on Founders Online letters
-#'
-#' Author: Thijs Vroegh
-#'
-#' Date script last modified: 20-01-2024
-#'
 #' Description:
 #' This script performs a topic analysis on the Founders Online texts.
 #' Ultimately, each letter is grouped by its dominant topic probability,
-#' allowing to make subsets of letters on a specific topic.
-#' In addition, the selection of letters based on the topic is a way to validate
-#' the results obtained from shico. Right now, we can select a group of
-#' homogeneous letters based on a minimum amount of word occurrences resulting
-#' from the shico output. Remember, the results from shico account for the
-#' dynamic evolution of words associated with the specified concept of interest.
-#' Last, the results of the topic analysis is used as input for the shiny app to
-#' allow for zooming in on the topic of interest through animated word clouds.
+#' allowing to make subsets of letters on a specific topic.In addition, the
+#' selection of letters based on the topic is a way to validate the results
+#' obtained from shico.
+#' Shico allows to select a group of homogeneous letters based on a minimum
+#' amount of word occurrences resulting from the shico output. The results from
+#' shico  account for the dynamic evolution of words' associated with the
+#' specified concept of interest.
+#' Topic analysis, on the' other hand, is a static representation of the letters.
+#' It allows to make subsets of letters based on the dominant topic, which can be
+#' used to validate the results from shico.
+#' Last, the results of the topic analysis is used as input for the application
+#' to allow for zooming in on the topic of interest through animated word clouds.
 #' Also, the grouping of letters based on their main topic allows to make
-#' cross-comparisons through network analyses specific to letter correspondences
-#' on a specific topic
+#' cross-comparisons through network analyses.
 
 #' Purpose:
 #' 1) get a sense on the diversity of topics present in the letters
 #' 2) create subsets of the data that include homogeneous data on the
 #'    two different political ideologies as specified by the lead applicant
 #' 3) double check shico results
-#' 4) create dataset with input for shiny app
+#' 4) create dataset with input for animated word clouds.
 #'
 #' Input dataset
 #' @param letters   The founders online preprocessed dataset with ids and letter
@@ -47,8 +44,6 @@ library(furrr)
 library(igraph)
 library(visNetwork)
 library(tidyverse)
-#library(sentopics)
-
 library(NLP)
 require(openNLP)
 require(openNLPdata)
@@ -56,18 +51,12 @@ require(openNLPdata)
 set.seed(1234)
 
 # Reading in preprocessed data ----
-#letters <- read.csv("../../Data/FoundingFathers/ffc_total.csv", header = TRUE)
 letters  <- readRDS("data/processed/founders/ffc_preprocessed.rds")
-glimpse(letters)
-
-texts <- letters %>% select(id, text, year, authors, sending_date)
+texts <- letters %>% select(id, text, year, authors, sending_date, sender_id,receiver_id)
 
 # sort data by date
 texts <- texts[order(texts$sending_date),]
 rownames(texts) <- NULL
-
-# Count the occurrences of the word "liberty" to get an impression
-sum(str_count(texts$text, "liberty")) #17883
 
 # A function for displaying a letter
 display_letter <- function(x) {
@@ -86,7 +75,6 @@ display_letter <- function(x) {
 display_letter(texts[2309,])
 
 # Text preprocessing ----
-
 ## 1. Part-of-speech tagging (nouns selection) ----
 source("scripts/functions/pos_tag.R")
 
@@ -133,7 +121,6 @@ for (i in 1:num_chunks) {
 }
 
 saveRDS(pos_tagged_data, file = "data/interim/pos_tagged_data.rds")
-
 # reading the stored data on the pos-tagged data, if necessary
 #pos_tagged_data <- readRDS(file = "data/interim/pos_tagged_data.rds")
 
@@ -303,15 +290,12 @@ word_counts <- sapply(token_list, function(tokens) sum(tokens == "plantation"))
 sum(word_counts) # 1335
 
 ## 4. Combine original letters with cleaned letter texts ----
-
-# https://stackoverflow.com/questions/62396405/unlist-all-items-from-quanteda-tokens-object-into-data-frame
 df_texts_cleaned <- data.frame(
           id           = seq_along(tokens_lemmatized),
           text_cleaned = sapply(tokens_lemmatized, paste, collapse = " "),
           row.names    = NULL) %>%
           mutate(text_cleaned = str_squish(text_cleaned))
 
-glimpse(texts)
 texts <- texts %>%
   mutate(id = as.numeric(id)) %>%
   left_join(df_texts_cleaned, by = "id")
@@ -350,17 +334,14 @@ sum(DFM[, "right"])
 
 # save DFM
 saveRDS(DFM, file = "data/interim/DFM.rds")
-
 # The precomputed object is in the data/interim folder
 DFM <- readRDS("data/interim/DFM.rds")
 
 # DTM (document-term-matrix as in package topicmodels) for coherence function
 DTM <- convert(DFM, to = "topicmodels")
 saveRDS(DTM, file = "data/interim/DTM.rds")
-#DTM <- readRDS("data/interim/DTM.rds")
-
 # The precomputed object is in the data/interim folder
-#DTM <- readRDS("data/interim/DTM.rds")
+DTM <- readRDS("data/interim/DTM.rds")
 
 # Semi-supervised topic modeling with seeded LDA: model selection ----
 
@@ -389,8 +370,8 @@ n <- seq(15, 35, by = 2)
 # Function fitting the LDA model and computing the divergence score, to be used
 # for parallelizing the code with furrr
 
-# The topic distribution within a document can be controlled with the
-# alpha-parameter of the model (default = 0.5. Low alpha priors ensure that the
+# The topic distribution within a document can be controlled with the alpha-
+# parameter of the model (default = 0.5). Low alphas ensure that the
 # inference process distributes the probability mass on a few topics for each
 # document
 get_div_score <- function(DFM, k) {
@@ -469,7 +450,7 @@ dev.off()
 
 #dict <- dictionary(file = "data/external/dict.yml")
 dict <- dictionary(list(
-  revolutionary_politics = c("liberty", "liberties",
+  liberal_politics = c("liberty", "liberties",
   "freedom", "right*", "privileges", "consent", "authority", "authorities",
   "power*","constitution", "constitutional", "law*", "independent", "independence",
   "independency", "sovereign", "sovereignty", "tax", "taxes", "taxation", "duty", "duties"),
@@ -521,7 +502,11 @@ plan(multisession, workers = 11)
 start <- Sys.time()
 
 # By default, the algorithm fits LDA through as many as 2000 iterations for
-# reliable results
+# reliable results. Also, we are interested in a more peaky distribution of
+# topics in the model, hence we set alpha = 0.2. This is a hyper-parameter
+# that controls the distribution of topics in the documents. A low alpha
+# value will lead to documents being represented by fewer topics, while a
+# high alpha value will lead to documents being represented by more topics.
 lda_fits <- K_range %>%
   future_map(
     ~ textmodel_seededlda(x           = DFM,
@@ -529,7 +514,7 @@ lda_fits <- K_range %>%
                           residual    = .x,
                           batch_size  = 0.01,
                           auto_iter   = TRUE,
-                          alpha       = 0.2, # we are interested in a more peaky distribution of topics in the model
+                          alpha       = 0.2,
                           verbose     = TRUE),
     furrr_options(seed = TRUE))
 
@@ -539,7 +524,7 @@ end - start # Time difference of 1.125711 hours
 saveRDS(lda_fits, file = "data/interim/lda_fits.rds")
 lda_fits <- readRDS(file = "data/interim/lda_fits.rds")
 
-# If necessary, access the candidate models via:
+# Access the candidate models via:
 # lda23_df <- as_tibble(terms(lda_fits[[1]]))
 
 ## 3. Metrics: exclusivity and coherence ----
@@ -551,7 +536,7 @@ source("scripts/functions/coherence.R")
 # model objects withdifferent k's
 sentopics_lda_fits <- lapply(lda_fits, sentopics::as.LDA)
 saveRDS(sentopics_lda_fits, file = "data/interim/sentopics_lda_fits.rds")
-#sentopics_lda_fits <- readRDS("data/interim/sentopics_lda_fits.rds")
+sentopics_lda_fits <- readRDS("data/interim/sentopics_lda_fits.rds")
 
 # Next, for each of the 7 topic models, we calculate coherence scores of each
 # individual topic within that model
@@ -584,7 +569,6 @@ legend("bottomright", c("Semantic Coherence", "Exclusivity (LDAvis lambda = 0)",
 dev.off()
 
 ## 4. Semantic granularity ----
-
 # we select two models of different granularity for further inspection
 
 # select indices of desired amount of residual topics k
@@ -592,23 +576,27 @@ select <- K_range %in% c(28, 31)
 candidates_inspect <- lda_fits[select]
 
 ## 5. Quality of single topics ----
-par(mfrow = c(1, 2))
-
-for (i in 1:length(candidates_inspect)) {
-
-  plot(coh[select][[i]], exc[select][[i]], main = paste("K =", length(coh[select][[i]]),"Topic Quality"),
-       ylab = "Exclusivity", xlab = "Coherence", col = "white")
-
-  text(coh[select][[i]], exc[select][[i]], labels = paste("", 1:length(coh[select][[i]])), cex = 1.5)
-}
+tiff(filename = "output/figures/Quality of single topics.tiff", width = 6000,
+     height = 4000, res = 450)
+  par(mfrow = c(1, 2))
+  for (i in 1:length(candidates_inspect)) {
+    plot(coh[select][[i]], exc[select][[i]], main = paste("K =", length(coh[select][[i]]),"Topic Quality"),
+         ylab = "Exclusivity", xlab = "Coherence", col = "white")
+    text(coh[select][[i]], exc[select][[i]], labels = paste("", 1:length(coh[select][[i]])), cex = 1.5)
+  }
+dev.off()
 
 ## 6. Visualize topic similarity ----
 source("scripts/functions/topic_network.R")
 
 # create network of topics for different models to allow for comparison
-topic_network(sentopics_lda_fits[[which(K_range == 28)]])
-topic_network(sentopics_lda_fits[[which(K_range == 31)]])
 
+tiff(filename = "output/figures/network of topics.tiff", width = 6000,
+     height = 4000, res = 450)
+topic_network(sentopics_lda_fits[[which(K_range == 28)]])
+dev.off()
+
+topic_network(sentopics_lda_fits[[which(K_range == 31)]])
 
 ## 7. Model selection ----
 lda_res <- lda_fits[[which(K_range == 28)]]
@@ -617,39 +605,41 @@ lda_res <- lda_fits[[which(K_range == 28)]]
 # with topic labels
 topic_terms <- as.data.frame(seededlda::terms(lda_res, n = 25))
 
+write.csv(topic_terms,"output/tables/topic_terms.csv")
+
 # Interpret each topic and change its label
 topicnames <-
-    c("01_Revolutionary politics",
+    c("01_Liberal politics",
       "02_Republican politics",
       "03_Maritime Trade and Slavery",
-      "04_Military Operations and Strategies in Conflict",
-      "05_Military Structure and Discipline in Armed Forces",
-      "06_Infrastructure Development and Transportation Networks",
-      "07_Real Estate and Property Transactions",
-      "08_Positive Relationships and Personal Well-being",
-      "09_The Physics of Motion and Observation",
-      "10_Diplomacy and International Relations",
-      "11_Personal Finance and Financial Management",
-      "12_Education and Societal Progress",
-      "13_Political Processes and Governance",
-      "14_The Influence of Literature and Media on Society",
-      "15_Government Policies and Decision-Making",
-      "16_Territorial Expansion and Land Claims in History",
-      "17_The Importance of Family and Relationships in Human Life",
-      "18_Etiquette and Protocol in Social and Business Interactions",
-      "19_Agriculture and the Economics of Crop Production",
-      "20_Wine Selection and Delivery Services",
-      "21_Professional Etiquette and Procedures in Government and Business",
-      "22_Professional Development and Career Advancemen",
-      "23_Strategic Planning and Decision-Making in Business",
-      "24_French language",
-      "25_aaaa",
-      "26_bbbb",
-      "27_cccc",
-      "28_ddddd",
-      "29_eeeee",
-      "30_fffff",
-      "31_gggggg"
+      "04_Government Proceedings and Agreements",
+      "05_Human Interaction and Decision-Making",
+      "06_Educational Institutions and Knowledge Advancement",
+      "07_Literary Works and Print Publications",
+      "08_Financial Transactions and Government Budgeting",
+      "09_Diplomatic Correspondence and Government Relations",
+      "10_Military Operations and Strategic Defense",
+      "11_Business Endeavors and Personal Relationships",
+      "12_Land Ownership and Property Rights",
+      "13_Political Governance and Legislative Proceedings",
+      "14_Financial Transactions and Monetary Matters",
+      "15_Professional Appointments and Recommendations",
+      "16_Military Service and Officer Hierarchy",
+      "17_Military Logistics and Operational Supplies",
+      "18_Social Etiquette and Personal Relations",
+      "19_Government Relations and Negotiation Strategies",
+      "20_Agricultural Practices and Crop Management",
+      "21_International Relations and Diplomacy",
+      "22_Transportation and Infrastructure Development",
+      "23_Maritime Operations and Naval Affairs",
+      "24_Family Relationships and Domestic Life",
+      "25_Mail and Package Handling",
+      "26_Financial Transactions and Economic Indicators",
+      "27_Emotions and Philosophical Reflections on Life",
+      "28_French words",
+      "29_Health, Travel, and Seasonal Experiences",
+      "30_Courtesy",
+      "31_Legal Proceedings and Judicial System"
       )
 
 # update the topic labels in theta
@@ -693,27 +683,26 @@ colnames(topterms) <- NULL
 topterms <- apply(topterms, 2, paste, collapse = ", ")
 
 ## inspect texts ----
-
 # with highest probability of addressing the topic (i.e., high theta)
-
 source("scripts/functions/get_topdocs.R")
 
 # you may need to set a different text_ID
 # Especially if you dropped docs during pre-processing! (cf. dfm_trim)
 topdocs <- get_topdocs(lda, texts, n = 50, text_ID = rownames(texts))
 
-# show most representative texts on the topic of interest, i.e. revolutionary politics
-t <- 1 # select the first topic of interest
+# show most representative texts on the topic of interest:
+t <- 1 # 01_Liberal politics
+t <- 2 # 02_Republican politics
 topterms[t]
 
-# -2 to leave out the column with the letters
+# Overview of year, authors, sending date, and topic probability
+# (-2 to leave out the column with the letters for clarity)
 topdocs[[t]][,-2]
 
-# top ten letters on revolutionary politics
+# Top-10 letters on Liberal (if t=1) or Republican politics (if t=2)
 topdocs[[t]][1:10,2]
 
 ## topic table ----
-
 # topic prevalence (average topic probability across all letters)
 prevalence <- colMeans(lda$theta)
 
@@ -724,14 +713,17 @@ n_docs <- apply(lda$theta, 2, function(x){unname(table(x > 0.5)[2])})
 topic_table <- data.frame("ID" = 1:K, topicnames, topterms, prevalence, n_docs)
 saveRDS(topic_table, file = "data/interim/topic_table.rds")
 
-
 # Topic analyses (final model) -----
-
 # Summarize the topic proportions and their top words
-plot(lda, nWords = 5)
+tiff(filename = "output/figures/topic proportions and their top words.tiff", width = 4000, height = 6000, res = 450)
+  plot(lda, nWords = 5)
+dev.off()
 
 # Display the most probable words
-sentopics::plot_topWords(lda, nWords = 10)
+tiff(filename = "output/figures/most probable words.tiff", width = 6000, height = 4000, res = 450)
+  par(mfrow = c(1,1))
+  sentopics::plot_topWords(lda, nWords = 10)
+dev.off()
 
 ## 1. Most-likely terms for each topic ----
 seed_topics <- as.data.frame(seededlda::terms(lda_res, 25))
@@ -740,7 +732,6 @@ seed_topics <- as.data.frame(seededlda::terms(lda_res, 25))
 write.csv(seed_topics,"output/tables/seed_topics.csv")
 
 ## 2. Topic probabilities per letter ----
-
 # https://www.kaggle.com/code/fajarkhaswara/topic-modelling-on-indonesian-twitter
 # function to get probabilities of topic
 get_doc_topic_probs <- function(slda) {
@@ -760,40 +751,43 @@ topic_probabilities <- as.data.frame(get_doc_topic_probs(lda_res)) %>%
   mutate(id = row_number())
 
 ## 3. Most-likely topic for each letter based on the theta parameter ----
-# main topic added as a new document-level variable in the texts dataframe
-# TODO: set min_prob higher to what value????
+# The main topic is added as a new document-level variable in the original
+# texts dataframe. This is useful for further analyses and visualizations.
+# The main topic is the topic with the highest probability for each letter.
+
+# See lda_fits process where we already ensured a peaky distribution of topics
 texts$topic <- seededlda::topics(lda_res,  min_prob = 0.05)
 
-frequency_table <- texts %>% count(topic) %>% arrange(desc(n))
-frequency_table
-
 ## 4a. Distribution of amount of letters per main topic ----
+table(texts$topic)
+
 topics_table          <- ftable(texts$topic)
 topicsprop_table      <- as.data.frame(prop.table(topics_table))
 topicsprop_table$Freq <- topicsprop_table$Freq * 100
 
-ggplot(data = topicsprop_table, aes(x = Var1, y = Freq)) +
-  geom_bar(stat = "identity") +
-  labs(x = "Topics", y = "Topic %") +
-  labs(title = "Topic proportions - Founders Online Archive") +
-  theme(axis.text.x = element_text(face = "bold",
-                                   size = 10, angle = 45, hjust = 1))
-
+tiff(filename = "output/figures/Distribution of amount of letters per topic.tiff", width = 6000, height = 4000, res = 450)
+  par(mfrow = c(1,1))
+  ggplot(data = topicsprop_table, aes(x = Var1, y = Freq)) +
+    geom_bar(stat = "identity") +
+    labs(x = "Topics", y = "Topic %") +
+    labs(title = "Topic proportions - Founders Online Archive") +
+    theme(axis.text.x = element_text(face = "bold", size = 10, angle = 45, hjust = 1))
+dev.off()
 
 ## 4b. Most prevalent topics ----
-
 ### overall ----
 prevalence_sorted        <- topic_table$prevalence
 names(prevalence_sorted) <- topic_table$topicnames
 prevalence_sorted        <- sort(prevalence_sorted)
 
-par(mfrow = c(1,1))
-par(mar = c(2, 4.25, 1, 1) * 2.5)
-barplot(prevalence_sorted, horiz = TRUE, las = 1, xlim = c(0, 0.06),
-        main = "Topic prevalence")
+tiff(filename = "output/figures/Most prevalent topics.tiff", width = 8000, height = 4000, res = 450)
+  par(mfrow = c(1,1))
+  par(mar = c(2, 4.25, 1, 1) * 2.5)
+  barplot(prevalence_sorted, horiz = TRUE, las = 1, xlim = c(0, 0.05),
+          main = "Topic prevalence")
+dev.off()
 
-## 4c. Prevalence by year ----
-
+## 4c. Topic prevalence by year ----
 # original code by https://github.com/mponweiser/thesis-LDA-in-R/blob/master/application-pnas/trends.Rnw
 # see also https://tm4ss.github.io/docs/Tutorial_6_Topic_Models.html#1_Model_calculation
 
@@ -803,20 +797,23 @@ theta_mean_by_year    <- do.call("rbind", theta_mean_by_year_by)
 years                 <- levels(factor(texts$year))
 ts                    <- ts(theta_mean_by_year, start = as.integer(years[1]))
 
-# plot
-par(mfrow = c(3,1))
+topic_table <- topic_table %>%
+  mutate(labels = rownames(topic_table))
 
-# select the first 3 topics which are of main interest
-for (i in 1:3) {
-  plot(ts[,i],
-       col = "orange",
-       ylim = c(0, 0.2),
-       ylab = "",
-       xlab = "",
-       main = paste(i, topic_table$labels[i]),
-       cex.main = 1,
-       lwd = 2)
-}
+tiff(filename = "output/figures/topic prevalence by year.tiff", width = 8000, height = 4000, res = 450)
+  par(mfrow = c(2,1))
+  # select the first 2 topics which are of main interest
+  for (i in 1:2) {
+    plot(ts[,i],
+         col = "orange",
+         ylim = c(0, 0.2),
+         ylab = "",
+         xlab = "",
+         main = paste(i, topic_table$labels[i]),
+         cex.main = 1,
+         lwd = 2)
+  }
+dev.off()
 
 ## 5. Visualize word probabilities per topic ----
 options(repr.plot.width = 15, repr.plot.height = 15)
@@ -828,7 +825,7 @@ lda_top_words <- setNames(reshape2::melt(lda_res$phi),c("topic","term","beta")) 
   ungroup() %>%
   arrange(topic, -beta)
 
-lda_top_words[nchar(as.character(lda_top_words$term)) >= 3 & lda_top_words$topic != "other",] %>%
+lda_top_words[nchar(as.character(lda_top_words$term)) >= 3,] %>%
   mutate(term = tidytext::reorder_within(term, beta, topic)) %>%
   ggplot(aes(beta, term, fill = factor(topic))) +
   geom_col(show.legend = T) +
@@ -837,7 +834,7 @@ lda_top_words[nchar(as.character(lda_top_words$term)) >= 3 & lda_top_words$topic
 
 ## 6. LDAvis ----
 
-# The LDAvis allows you to interactively visualize an LDA topic model. The major
+# The LDAvis allows to interactively visualize an LDA topic model. The major
 # graphical elements include:
 # 1) Default topic circles - K circles, one for each topic, whose areas are set
 #    to be proportional to the proportions of the topics across the N total tokens
@@ -848,11 +845,9 @@ lda_top_words[nchar(as.character(lda_top_words$term)) >= 3 & lda_top_words$topic
 # 4) Topic-term circles - KxW circles whose areas are set to be proportional to
 #    the frequencies with which a given term is estimated to have been generated
 #    by the topics
-
 sentopics::LDAvis(lda)
 
-
-# Save dataframe for shiny animated wordcloud and network analyses ----
+# Save dataframe for animated wordcloud and network analyses ----
 
 # transpose the seedtopics so that it can be merged with texts file
 seed_topics <- t(seed_topics) %>% as.data.frame() %>%
@@ -860,27 +855,23 @@ seed_topics <- t(seed_topics) %>% as.data.frame() %>%
   unite(col = 'terms', starts_with("V"), sep = ', ')
 
 letters_with_topics <- texts %>%
+  mutate(id = as.integer(id)) %>% # convert id to integer
   # merge in the topic probabilities per document, on id
   left_join(topic_probabilities, by = "id") %>%
   # merge in the topic terms, by topic number
   left_join(seed_topics, by = "topic")
 
-# Save preprocessed data wit htopic information ----
+# Save preprocessed data with topic information ----
 write.csv(letters_with_topics,"data/processed/founders/letters_with_topic_info.csv")
 
-# Let's look more closely at the distribution of topics within some individual
-# documents. Show distribution over topics for sample of letters
-# see also https://tm4ss.github.io/docs/Tutorial_6_Topic_Models.html#1_Model_calculation
-
+# Show distribution over topics for sample of letters. See also
+# https://tm4ss.github.io/docs/Tutorial_6_Topic_Models.html#1_Model_calculation
 letters_with_topics %>% sample_n(20) %>%
   select(id, matches("^[0-9]")) %>%
   pivot_longer(-id, names_to = 'topic',values_to = 'probability') %>%
-  #mutate(topic = str_replace(topic,'prob_','')) %>%
-  #inner_join(topiclabels,by='topic') %>%
   ggplot(aes(x = as.factor(id), y = probability)) +
   geom_bar(aes(fill = topic), stat = 'identity') + coord_flip() +
   ggtitle('Topic probability distribution per review') + theme_minimal() +
-
   theme(legend.position = "right",
         legend.text     = element_text(size = 6),
         legend.title    = element_blank(),
@@ -888,8 +879,8 @@ letters_with_topics %>% sample_n(20) %>%
         axis.title      = element_text(size = 8),
         axis.text       = element_text(size = 8)) + scale_fill_viridis_d(option = "inferno")
 
-#create dataframe for shiny animated wordcloud
- yr_topic_term_freq <- letters_with_topics %>%
+# Create dataframe for animated wordcloud
+yr_topic_term_freq <- letters_with_topics %>%
   select(id,text, year,topic, terms) %>%
   rowwise() %>%
   mutate(terms = str_split(terms, ", ")) %>%
@@ -912,9 +903,8 @@ letters_with_topics %>% sample_n(20) %>%
     mutate(relative_occurrence = word_count / sum(word_count)) %>%
   ungroup()
 
-# save results
+# Save results
 write.csv(yr_topic_term_freq,"data/processed/founders/yr_topic_term_freq.csv")
-
 
 # Topic probability distribution differences for Founding Fathers ----
 letters_with_topics_ff <- letters_with_topics %>%
@@ -924,36 +914,37 @@ letters_with_topics_ff <- letters_with_topics %>%
          authors == "Madison, James"   ) %>%
 
   # select topics of main interest where we want to explore differences
-  select(authors,`01_Revolutionary politics`,
-                 `02_Republican politics`,
-                 `03_Maritime Trade and Slavery`) %>%
+  select(authors,`01_Liberal politics`,
+                 `02_Republican politics`) %>%
 
   # filter out very low probabilities to enhance clarity
-  filter(`01_Revolutionary politics`     >= 0.05 &
-         `02_Republican politics`        >= 0.05 &
-         `03_Maritime Trade and Slavery` >= 0.05)
+  filter(`01_Liberal politics`     >= 0.05 &
+         `02_Republican politics`  >= 0.05)
 
 table(letters_with_topics_ff$authors)
 
-
-letters_with_topics_ff %>%
-  # topic probabilities to rows
-  pivot_longer(-authors, names_to = 'topic', values_to = 'probability') %>%
-  mutate(authors = as.factor(authors))  %>%
+tiff(filename = "output/figures/Topic probability distribution for political letters written by founding fathers.tiff", width = 6000, height = 4000, res = 450)
+  par(mfrow = c(1,1))
 
   # create density plots per topic of interest for founding fathers
-  ggplot(aes(x = probability, group = authors, fill = authors)) +
-  geom_density(alpha = 0.6) +
-  facet_wrap(~ topic, ncol = 4) +
+  letters_with_topics_ff %>%
+    # topic probabilities to rows
+    pivot_longer(-authors, names_to = 'topic', values_to = 'probability') %>%
+    mutate(authors = as.factor(authors))  %>%
 
-  ggtitle('Topic probability distribution for political letters written by founding fathers') +
-  theme_minimal()  +
-  theme(legend.position = c(0.9, 0.2),
-        legend.text     = element_text(size = 8),
-        legend.title    = element_blank(),
-        plot.title      = element_text(hjust = 0.5, size = 12),
-        axis.title      = element_text(size = 8),
-        axis.text       = element_blank()) + ylim(c(0,20))
+    # create density plots per topic of interest for founding fathers
+    ggplot(aes(x = probability, group = authors, fill = authors)) +
+    geom_density(alpha = 0.6) +
+    facet_wrap(~ topic, ncol = 4) +
+    ggtitle('Topic probability distribution for political letters written by founding fathers') +
+    theme_minimal()  +
+    theme(legend.position = c(0.9, 0.2),
+          legend.text     = element_text(size = 8),
+          legend.title    = element_blank(),
+          plot.title      = element_text(hjust = 0.5, size = 12),
+          axis.title      = element_text(size = 8),
+          axis.text       = element_blank()) + ylim(c(0,20))
+dev.off()
 
 # Interpretation ----
 # In the context of topic probability distributions, high probability values

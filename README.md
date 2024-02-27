@@ -51,9 +51,8 @@
 
 ## About the project
 The goal of the HGEAR project is to chart shifts in the character and structure of political discourse during the era of the American Revolution. By comparing shifts
-in language usage (via ShiCo: Shifting Concepts Through Time) with changing formations in 
-correspondence networks, we are able to measure how networks of communication within the 
-Founders Online corpus shaped the character, distribution, and spread of political ideas 
+in language usage (via [*ShiCo*](https://github.com/NLeSC/ShiCo/) (Shifting Concepts Through Time) with changing formations in 
+correspondence networks, we are able to measure how networks of communication within the [*Founders Online*](https://founders.archives.gov/) corpus and other resources such as the [*Letters of Delegates to Congress*](https://memory.loc.gov/ammem/amlaw/lwdg.html) shaped the character, distribution, and spread of political ideas 
 during the Revolutionary era. This project and associated analyses offer powerful new methods
 for addressing longstanding debates in the field of early American history. Also, by 
 means of additional collected data, we show how the 
@@ -75,7 +74,7 @@ Here's the link to learn more about the project's [background](BACKGROUND.md).
     │   ├── processed       <- The final, canonical data sets for modeling.
     │   └── raw             <- The original, immutable data dump.
     │
-    ├── models              <- word2vec models to be used with shico software.
+    ├── shico_models        <- word2vec models to be used with shico software.
     │   ├── shico_delegates <- Delegates of Congress.
     │   ├── shico_ecco      <- Eighteenth Century Collections Online.
     │   ├── shico_evans     <- Evans Early American Imprints.
@@ -92,18 +91,15 @@ Here's the link to learn more about the project's [background](BACKGROUND.md).
     │
     ├── scripts            <- Source code for use in this project.
     │   ├── 1. data_collection           <- Including scraping data.
-    │   ├── 2. data_preparation          <- Data cleaning and preprocessing to enhance the data quality by organizing raw data in a suitable format.
+    │   ├── 2. data_preparation          <- Data cleaning/preprocessing to enhance the data quality by organizing raw data in a suitable format.
     │   ├── 3. exploratory_data_analysis <- Getting a first and deeper understanding of the data.
     │   └── 4. analysis_and_modeling     <- Data analysis and modeling.
     │   └── 5. deployment                <- Geographical analysis.
     │   └── 6. functions                 <- Applied accross the project and sourced in the code.
     │
-    ├── tests               <- Test files (for functions)
+    ├── notebooks               <- Example of analysis)
    
-
-
-
-The project is organized according to a data science structure covering all the phases from data acquisition to deployment: 
+The project is organized according to a data science structure covering all the phases from data acquisition to deployment:
 
 <img src="documentation/img/Data science lifecycle overview.jpg" />
 
@@ -266,8 +262,8 @@ Please cite if you use it. You can do this easily with one of these options:
 
 ## Acknowledgments
 This code is being developed by the Netherlands eScience Center in collaboration with the faculty of of American Studies at the University of Groningen. Our thanks go out to the authors that shared or open-sourced their code, enabling us to create this project that can hopefully be of service to many. Particularly, we like to thank the following people:
+* Cristian Marocico
 * Thomas Hoekstra
-* Finn-Ole Höner
 * Cristian A. Marocico
 * Ramona Roller
 
