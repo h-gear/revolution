@@ -216,54 +216,7 @@ combined_df2$Content2 <- sub("^[^a-zA-Z]{0,7}", "", combined_df2$Content2)
 combined_df2$Content <- str_remove_all(combined_df2$Content,"NEXT SECTION ..  NAVIGATOR")
 combined_df2$Content2 <- str_remove_all(combined_df2$Content2,"NEXT SECTION ..  NAVIGATOR")
 
-## E) TRANSLATE NON-ENGLISH TEXTS ----
-
-# Function to apply language_detect to each row
-detect_language <- function(row) {
-    text <- row[["Content2"]]
-
-    if (!is.na(text) && nchar(text) > 0) {
-        tryCatch({
-            language <- language_detect(text)
-            return(language)
-        }, error = function(e) {
-            # Handle errors, e.g., return "Unknown" for problematic rows
-            return("Unknown")
-        })
-    } else {
-        return("No Text")
-    }
-}
-
-# Apply the function to each row and create a new 'language' column (ca. 10 minutes)
-combined_df2$language <- apply(combined_df2, 1, detect_language)
-
-#table(combined_df2$language)
-
-# Function to translate text to English
-translate_to_english <- function(text, source_lang) {
-    # It takes a text string and its corresponding source language as inputs
-
-    # If the source language is not English, it uses the google_translate
-    # function to translate the text to English
-    if (source_lang != "en" && source_lang != "No Text" && source_lang != "Unknown") {
-        translated <- google_translate(text, target_language = "en", source_language = source_lang)
-        return(translated)
-
-        #otherwise, it returns the original text
-    } else {
-        return(text)
-    }
-}
-
-# Add a translated column. The map2_chr function takes the text_column and
-# language column as inputs for each row and uses the translate_to_english function
-# to translate the text while considering the source language from the language column
-combined_df2 <- combined_df2 %>%
-    mutate(translated_text = map2_chr(Content2, language, ~ translate_to_english(.x, .y)))
-
-
-## F) DATE VARIABLE ----
+## E) DATE VARIABLE ----
 process_dates <- function(data) {
 
     valid_months <- c("jan", "jn", "jnr", "feb", "fbr", "mar","mrc", "ap", "may", "jun",
@@ -273,8 +226,10 @@ process_dates <- function(data) {
                         "marine", "julia","marquis", "marsh", "market", "appointed")
 
     # get first sentence where the date is being mentioned
-    data$date <- stringr::word(string = data$Content, start = 1, end = 25,
-                               sep = stringr::fixed(" "))
+    data$date <- stringr::word(string = data$Content,
+                               start  = 1,
+                               end    = 25,
+                               sep    = stringr::fixed(" "))
 
     # Clean and process text based on data$date
     clean_and_process <- function(text) {
@@ -551,24 +506,28 @@ combined_df2 <- process_dates(combined_df2)
 
 # 3. SAVING PREPROCESSED DATA ----
 
-## A) ALL DATA IN CSV FILE ----
+## A1) ALL DATA IN CSV FILE ----
 all_data <- combined_df2 %>%
-    select(-date,-Content) %>%
+    select(-date,-Content,-language) %>%
     rename(Text = Content2,
            Date = FinalDate)
 
+# lowercase all column names
+colnames(all_data) <- tolower(colnames(all_data))
+
 write.csv(all_data, "data/processed/delegates/Letters of Delegates.csv", row.names = FALSE)
+
+## A2) ALL DATA IN RDS FILE ----
+saveRDS(all_data, file = "data/processed/delegates/Letters of Delegates.rds")
 
 ## B) FOR MAKING WORD2VEC MODELS (SHICO) ----
 combined_df3 <- combined_df2 %>% select(ID,Year,Title)
 write.csv(combined_df3, "data/raw/delegates/Letters of Delegates.csv", row.names = FALSE)
 
 ## C) LETTERS AS SEPARATE TEXT FILES ----
-
 # For each of the 25 volumes, save each letter as a separate text file in a
 # subfolder called after its volume number (e.g. "2"). These text files are
 # input for later pre-processing and shico word2vec model building.
-
 for (i in 1:25) {
 
     # Format the number with leading zero, if necessary
@@ -608,8 +567,9 @@ for (i in 1:25) {
 }
 
 # note: standard cleaning of the letter texts occurs in the python script
-# main.py aimed at preprocessing the data to develop word2vec models to be used
-# in shico
+# make_word2vec_models_for_delegates.py, found in w2v_models/delegates. This
+# script is aimed at preprocessing the data to develop word2vec models to be
+# used in shico
 
 ## D) LETTERS PER YEAR ----
 

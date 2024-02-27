@@ -27,7 +27,13 @@ require(openNLPdata)
 # 2. LOAD PREPROCESSED FO LETTER DATA ----
 letter_ss <- readRDS(file = "data/processed/founders/ffc_preprocessed.rds") %>%
   as.data.frame() %>%
-  slice(1:1000)
+
+# 2. LOAD PREPROCESSED DELEGATES LETTER DATA ----
+#letter_ss <- readRDS(file = "data/processed/delegates/Letters of Delegates.rds") %>%
+#  as.data.frame() %>%
+#  rename(authors    = from,
+#         recipients = to,
+#         sending_date = date)
 
 # 3. EXTRACTING AND PREPROCESSING FIRST SENTENCE ----
 
@@ -488,6 +494,7 @@ letter_ss <- letter_ss %>%
                           str_detect(city_extraction, "epping forest")  ~ "epping forest",
                           #str_detect(city_extraction, "new york")       ~ "new york",
                           str_detect(city_extraction, "newyork")        ~ "new york",
+                          str_detect(city_extraction, "new-york")        ~ "new york",
                           str_detect(city_extraction, "boston road")    ~ "boston road",
                           str_detect(city_extraction, "la coruña")  ~ "la coruña",
                           str_detect(city_extraction, "bourdeaux")  ~ "bordeaux",
@@ -563,7 +570,10 @@ letter_ss <- letter_ss %>%
                           str_detect(city_extraction, "richd") ~ "richmond",
                           str_detect(city_extraction, "hampton falls") ~ "hampton falls",
                           str_detect(city_extraction, "philadelpa")    ~ "philadelphia",
+                          str_detect(city_extraction, "philaa")    ~ "philadelphia",
+                          str_detect(city_extraction, "philad")    ~ "philadelphia",
                           str_detect(city_extraction, "phia")    ~ "philadelphia",
+                          str_detect(city_extraction, "pha")    ~ "philadelphia",
                           str_detect(city_extraction, "hiladelphia")    ~ "philadelphia",
                           str_detect(city_extraction, "phyladelphia")  ~ "philadelphia",
                           str_detect(city_extraction, "philadelp")     ~ "philadelphia",
@@ -1355,7 +1365,6 @@ letter_ss <- letter_ss %>%
                    "state"   = "state",
                    "country" = "country")) %>%
   select(-timediff)
-  #select(-timediff, -city_extraction, -first_sentence)
 
 # save results
 saveRDS(letter_ss, file = "data/processed/founders/founders_geo_ref.rds")
