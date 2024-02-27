@@ -202,7 +202,7 @@ Further information on these data sources can be found here:
 * Evans Early American Imprints (Evans) TCP: https://textcreationpartnership.org/tcp-texts/evans-tcp-evans-early-american-imprints/
 
 The corresponding data can be retrieved here: 
-* Founders Online: https://github.com/jaytimm/founders-online-corpus
+* Founders Online: https://github.com/jaytimm/founders-online-corpus and for the data more recently scraped, see https://github.com/h-gear/Explore_with_R/tree/main/data
 * Letters of Delegates of Congress: in this repository 
 * Ecco: https://www.dropbox.com/sh/inhwjphw682i2gf/AAC8NixNye8Gp0smYBTly2Y9a?dl=0
 * Evans: https://graphics.cs.wisc.edu/WP/vep/vep-tcp-collection/
@@ -218,10 +218,12 @@ The code for the analyses can be found in the subfolder **scripts**. It is struc
 * 5_deployment
 * functions (# applied accross the project and sourced in the code)
 
+In adition, the code and procedures to create the word2vec models needed as input for running shico 
+can be found in the subfolder **w2v_models/delegates**. The code is applied to the data from the delegates of congress, but can be easily adapted and eqaully applied to create word2vec models for all other datasets in this project as well.
+
 
 ## Contributing
-If you want to contribute to the development of hgear, have a look at the [contribution guidelines](CONTRIBUTING.md).
-Please submit pull requests to us in case you want to participate. Suggestions, improvements, and edits are most welcome!
+If you want to contribute to the development of hgear, have a look at the [contribution guidelines](CONTRIBUTING.md).Please submit pull requests to us in case you want to participate. Suggestions, improvements, and edits are most welcome!
 
 ## License
 This project is licensed under the Apache License 2.0 - see the [licence](LICENSE.md) file for details. This means that this project can be used, modified and redistributed for free, even for commercial purposes.
@@ -261,10 +263,9 @@ Please cite if you use it. You can do this easily with one of these options:
 `@software{Vroegh_hgear,author = {Vroegh, Thijs},license = {Apache 2.0},title = {{h-gear}},url = {https://github.com/h-gear/revolution}}`
 
 ## Acknowledgments
-This code is being developed by the Netherlands eScience Center in collaboration with the faculty of of American Studies at the University of Groningen. Our thanks go out to the authors that shared or open-sourced their code, enabling us to create this project that can hopefully be of service to many. Particularly, we like to thank the following people:
+This code is being developed by the Netherlands eScience Center in collaboration with the faculty of American Studies at the University of Groningen. Our thanks go out to the authors that shared or open-sourced their code, enabling us to create this project that can hopefully be of service to many. Particularly, we like to thank the following people:
 * Cristian Marocico
 * Thomas Hoekstra
-* Cristian A. Marocico
 * Ramona Roller
 
 <!-- MARKDOWN LINKS & IMAGES -->
