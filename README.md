@@ -74,11 +74,11 @@ Here's the link to learn more about the project's [background](BACKGROUND.md).
     │   ├── processed       <- The final, canonical data sets for modeling.
     │   └── raw             <- The original, immutable data dump.
     │
-    ├── shico_models        <- word2vec models to be used with shico software.
-    │   ├── shico_delegates <- Delegates of Congress.
-    │   ├── shico_ecco      <- Eighteenth Century Collections Online.
-    │   ├── shico_evans     <- Evans Early American Imprints.
-    │   └── shico_founders  <- Founders Online.
+    ├── w2v_models          <- word2vec models to be used with shico software.
+    │   ├── delegates       <- Delegates of Congress.
+    │   ├── ecco            <- Eighteenth Century Collections Online.
+    │   ├── evans           <- Evans Early American Imprints.
+    │   └── founders        <- Founders Online.
     │
     ├── documentation       <- Data dictionaries, manuals, and all other explanatory materials.
     │
@@ -95,7 +95,7 @@ Here's the link to learn more about the project's [background](BACKGROUND.md).
     │   ├── 3. exploratory_data_analysis <- Getting a first and deeper understanding of the data.
     │   └── 4. analysis_and_modeling     <- Data analysis and modeling.
     │   └── 5. deployment                <- Geographical analysis.
-    │   └── 6. functions                 <- Applied accross the project and sourced in the code.
+    │   └── functions                    <- Applied accross the project and sourced in the code.
     │
     ├── notebooks               <- Example of analysis)
    
