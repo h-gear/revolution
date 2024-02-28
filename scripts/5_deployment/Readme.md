@@ -1,2 +1,2 @@
-# This folder contains code for the geographical analysis, i.e. geocoding of the founders online letters. In addition, code is provided to
- make an animated wordcloud, to be used as an alternative to shico.
+- This folder contains code for the geographical analysis, i.e. geocoding of the founders online letters. 
+- In addition, code is provided to make an animated wordcloud, to be used as an alternative or extension to the shico application.

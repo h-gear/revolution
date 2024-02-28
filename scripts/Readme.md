@@ -7,4 +7,4 @@ This folder hosts all the code for the software development. It has six sub-fold
 3. exploratory_data_analysis
 4. analysis_and_modeling
 5. deployment
-functions # applied accross the project and sourced in the code
+6. functions # applied accross the project and sourced in the code

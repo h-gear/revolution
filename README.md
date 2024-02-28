@@ -49,10 +49,10 @@
 </details>
 
 
-## About the project
+## About the Project
 
 The historical concept of democracy, liberry and freedom and its development through time is important to our understanding of the past. The goal of the HGEAR project is to chart shifts in the character and structure of political discourse during the era of the American Revolution. By comparing shifts
-in language usage (via [**ShiCo**](https://github.com/NLeSC/ShiCo/) *(Shifting Concepts Through Time*) with changing formations in 
+in language usage (via [**ShiCo**](https://github.com/h-gear/ShiCo/) *(Shifting Concepts Through Time*) with changing formations in 
 correspondence networks, we are able to measure how networks of communication within the [**Founders Online**](https://founders.archives.gov/) corpus and other resources such as the [**Letters of Delegates to Congress**](https://memory.loc.gov/ammem/amlaw/lwdg.html) shaped the character, distribution, and spread of political ideas 
 during the Revolutionary era. This project and associated analyses offer powerful new methods
 for addressing longstanding debates in the field of early American history. Also, by 
@@ -61,11 +61,14 @@ here included scripts and analyses can be easily accomodated to include other le
 correspondence sources as well. Ultimately, this allows researchers to get a more complete picture
 of the fluxes in the political discourse during the American Revolution.
 
+The project is organized as follows:
 
-### Documentation
-Here's the link to learn more about the [**project's background**](documentation/BACKGROUND.md).
+<img src="documentation/img/Data science lifecycle overview.jpg" />
 
-## Project Organization
+## Documentation
+Here's the link to learn more about the [**project's background**](documentation/BACKGROUND.md). 
+
+## Repository Structure
 
     ├── LICENSE
     ├── README.md           <- The top-level README for developers and users using this project.
@@ -100,11 +103,6 @@ Here's the link to learn more about the [**project's background**](documentation
     │
     ├── notebooks               <- Example of analysis)
    
-The project is organized according to a data science structure covering all the phases from data acquisition to deployment:
-
-<img src="documentation/img/Data science lifecycle overview.jpg" />
-
-
 
 ## Getting Started
 
@@ -122,7 +120,7 @@ Here, we give a step by step instructions that tell you how to get you up and ru
 The code is written mostly in R and parts in Python. For R , [*RStudio*](https://posit.co/download/rstudio-desktop/) is recommended, while for Python, we recommend [*anaconda*](https://www.anaconda.com/download).
 
 
-#### **R: Setting up the Virtual Environment with venv**
+#### **Setting up the Virtual Environment for R**
 To ensure a consistent and reproducible environment, this project uses the venv package in R. Follow these steps to set up the virtual environment and install the necessary packages:
 
 _Navigate to the Project Directory:_
@@ -179,9 +177,12 @@ source .venv/bin/activate
 ```
 
 _Install Dependencies:_
+Once the virtual environment is created and activated you can install the dependencies by running:
 ```
 pip install -r requirements.txt
 ```
+At this stage, you should be able to run the scripts.
+
 _Deactivate the Virtual Environment:_
 When you are done, deactivate the virtual environment:
 
@@ -190,23 +191,7 @@ deactivate
 ```
 
 ## Data
-This project is based on four datasets:
-- Ecco
-- Evans
-- Founders Online
-- Delegates of Congress
-
-Further information on these data sources can be found here:
-* Founders Online: https://founders.archives.gov/
-* Letters of Delegates to Congress: https://memory.loc.gov/ammem/amlaw/lwdg.html
-* Eighteenth Century Collections Online (ECCO) TCP: https://textcreationpartnership.org/tcp-texts/ecco-tcp-eighteenth-century-collections-online/
-* Evans Early American Imprints (Evans) TCP: https://textcreationpartnership.org/tcp-texts/evans-tcp-evans-early-american-imprints/
-
-The corresponding data can be retrieved here: 
-* Founders Online: https://github.com/jaytimm/founders-online-corpus and for the data more recently scraped, see https://github.com/h-gear/Explore_with_R/tree/main/data
-* Letters of Delegates of Congress: in this repository 
-* Ecco: https://www.dropbox.com/sh/inhwjphw682i2gf/AAC8NixNye8Gp0smYBTly2Y9a?dl=0
-* Evans: https://graphics.cs.wisc.edu/WP/vep/vep-tcp-collection/
+If you are interested in learning more about the data used in the project, then go [**here**](documentation/DATA.md).  
 
 <!-- USAGE EXAMPLES -->
 ## Usage
@@ -239,6 +224,7 @@ This project is licensed under the Apache License 2.0 - see the [licence](LICENS
 #### Shifting Concepts in Time (Shico)
 * Shico: https://github.com/NLeSC/ShiCo
 * Shico deployment: https://github.com/c-martinez/ShiCo-deploy
+* Shico updated for Python 3: https://github.com/h-gear/ShiCo/
 
 ## Contact
 If you find any bugs or experience difficulties when using the code in this project, please create a issue on this Github page. If you have any specific questions with respect to our research, or methodology used, please email Thijs Vroegh t.vroegh@esciencecenter.nl
