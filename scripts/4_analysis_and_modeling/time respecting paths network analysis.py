@@ -5,9 +5,16 @@
 # writers and patterns of communication in the transmission of political ideas through 
 # letters. We distinguish between two types of political thinking: liberal ideology and 
 # republican ideology. By employing a temporal network approach, the chronological order
-# of the edges within the network  preserved. Unlike traditional aggregated networks
+# of the edges within the network are preserved. Unlike traditional aggregated networks
 # that disregard the temporal information that is implicit in the letter data, this 
 # approach significantly mitigates the bias in topological network measures.
+# ----------------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------------
+# This code is adapted from and builds on the code by Dr. Ramona Roller as part of her 2023
+# article "Tracing the Footsteps of Ideas: Time-respecting Paths Reveal Key Reformers and 
+# Communication Pathways in Protestant Letter Networks."
+# https://doi.org/10.3929/ethz-b-000651473
 # ----------------------------------------------------------------------------------------
 
 # 0. load libraries ----------------------------------------------------------------------
