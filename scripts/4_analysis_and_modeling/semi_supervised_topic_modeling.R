@@ -427,7 +427,7 @@ div_score_df %>%
     ggtitle("Number of Topics vs Divergence")
 dev.off()
 
-# -> These first results suggest to look in more detail around 29 topics
+# -> These first results suggest to look in more detail around 28 topics
 
 ## 2. Testing candidate models ----
 
@@ -477,7 +477,7 @@ sum(word_counts) # 818
 
 # Given the seed topics, check for models with different amount of residual topics
 
-# While the 31-topic model from above (still ignorant of any seed topics) has
+# While the 28-topic model from above (still ignorant of any seed topics) has
 # the highest divergence, maximal divergence does not necessarily mean that that
 # number of topics yields maximal meaningfulness. So, next We'll explore multiple
 # models with different amounts of residual topics which come on top of the three
@@ -487,15 +487,13 @@ sum(word_counts) # 818
 # Given the three pre-specified seed topics, we now have to look for the optimal
 # amount of residual topics added to our specified ones.
 
-# See https://dataprofessor.net/blog/nlp/gc_topic_model/gc_topic_model_best_fit
-
-# Here, we choose the number of residual topics to inspect, again, those in
+# Here, we choose the number of >>residual topics<< to inspect, again, those in
 # addition to the 3 seed topics as formulated in the dictionary above
 K_range <- c(25,26,27, 28, 29,30,31)
 
 # So, these amount of topics plus, each time, the 3 seed topics, leads to
-# overall model-testing with 26,27,28, 29 ,30,31,32 topics. This ranges around
-# the 29 topics for which we had the maximum divergence found earlier
+# overall model-testing with 28,29,30,31,32,33,34 topics. This ranges around
+# the 28 topics for which we had the maximum divergence found earlier
 
 plan(multisession, workers = 11)
 
@@ -531,10 +529,11 @@ lda_fits <- readRDS(file = "data/interim/lda_fits.rds")
 source("scripts/functions/exclusivity.R")
 source("scripts/functions/coherence.R")
 
-# Inspect topic coherence and exclusivity of candidate models listed in
-# lda_fits object. First, we convert the seeded_lda models to a list of lda
-# model objects withdifferent k's
+# Inspect topic coherence and exclusivity of candidate models listed in lda_fits object.
+
+# First, we convert the seeded_lda models to a list of lda model objects withdifferent k's
 sentopics_lda_fits <- lapply(lda_fits, sentopics::as.LDA)
+
 saveRDS(sentopics_lda_fits, file = "data/interim/sentopics_lda_fits.rds")
 sentopics_lda_fits <- readRDS("data/interim/sentopics_lda_fits.rds")
 
@@ -699,7 +698,7 @@ topterms[t]
 # (-2 to leave out the column with the letters for clarity)
 topdocs[[t]][,-2]
 
-# Top-10 letters on Liberal (if t=1) or Republican politics (if t=2)
+# top-10 letters on liberal (if t = 1) or Republican politics (if t = 2)
 topdocs[[t]][1:10,2]
 
 ## topic table ----
@@ -740,13 +739,6 @@ get_doc_topic_probs <- function(slda) {
   return(out)
 }
 
-# get_word_topic_probs <- function(slda) {
-#   out <- slda$phi %>%
-#     as_tibble(rownames = "topic") %>%
-#     pivot_longer(cols = !matches("topic"), names_to = "token", values_to = "prob")
-#   return(out)
-# }
-
 topic_probabilities <- as.data.frame(get_doc_topic_probs(lda_res)) %>%
   mutate(id = row_number())
 
@@ -756,7 +748,7 @@ topic_probabilities <- as.data.frame(get_doc_topic_probs(lda_res)) %>%
 # The main topic is the topic with the highest probability for each letter.
 
 # See lda_fits process where we already ensured a peaky distribution of topics
-texts$topic <- seededlda::topics(lda_res,  min_prob = 0.05)
+texts$topic <- seededlda::topics(lda_res)
 
 ## 4a. Distribution of amount of letters per main topic ----
 table(texts$topic)
@@ -775,7 +767,7 @@ tiff(filename = "output/figures/Distribution of amount of letters per topic.tiff
 dev.off()
 
 ## 4b. Most prevalent topics ----
-### overall ----
+### overall
 prevalence_sorted        <- topic_table$prevalence
 names(prevalence_sorted) <- topic_table$topicnames
 prevalence_sorted        <- sort(prevalence_sorted)
