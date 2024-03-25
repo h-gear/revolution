@@ -64,12 +64,13 @@ path_to_results = '../../output/figures/'
 # We select those letters that are centered on a specific political ideology, either by 
 # filename or by selecting the appropriate topic number. 
 
-# If 1) SHICO ---- 
-# Run the following analysis separatedly on either 'links_liberal' or 'links_republican'
 # select dataset: liberal or republican
 ideology = "_" + "republican"
-file_path = path_to_data + 'links{}.csv'.format(ideology)
+#ideology = "_" + "liberal"
 
+# If 1) SHICO ---- 
+# Run the following analysis separatedly on either 'links_liberal' or 'links_republican'
+file_path = path_to_data + 'links{}.csv'.format(ideology)
 links = pd.read_csv(file_path)
 display(links.head())
 
@@ -83,7 +84,8 @@ display(letters.head(3))
 # make subset of letters using topic columnn as a document-level variable indicating to which topic a letter belongs
 #links = letters[letters['topic'] == "01_Liberal politics"] 
 links = letters[letters['topic'] == "02_Republican politics"] 
-display(links.head())
+display(links.head(1)) # the first observation of the subset
+display(links.tail(1)) # the last observation of the subset
 
 links.info()
 
@@ -177,7 +179,7 @@ print(temp_net)
 # i.e., in our case days. 
 
 # my delta t's covering 1 to 7 weeks 
-delta_ts = [7,14,21,28,35,42,49]
+delta_ts = [7,14,21,28,35,42,49,56]
 
 paths = []
 
@@ -202,7 +204,7 @@ pbar.close()
 # In communication networks, the betweenness of a node indicates to what extent
 # that node controbutes to the transmission of ideas in the network.
 
-# we base our results on delta t = 49
+# we base our results on delta t = 49 (7 weeks)
 delta_t = 49
 
 nodes = pd.read_csv(path_to_data + 'nodes_ff.csv')
@@ -223,7 +225,7 @@ for l in paths.paths:
             print('{0} -> {1}'.format(p, paths.paths[l][p][1]))
 
 # As an example, look to a group of paths with a specific length
-paths.paths[40]
+paths.paths[8]
 
 # create a network of paths
 network_graph = pp.Network.from_paths(paths)
@@ -585,12 +587,12 @@ data_all.head()
 data_all.to_csv(path_to_results + 'path_length_freqs_different_deltaT{}.csv'.format(ideology), index = False)
 
 # --------------------------------------------------------------------------------------
-# 7. Visualise path length frequency distribution for delta t = 42
+# 7. Visualise path length frequency distribution for delta t = 49
 # --------------------------------------------------------------------------------------
 
 # Load path frequencies
 path_freqs = pd.read_csv(path_to_results + 'path_length_freqs_different_deltaT{}.csv'.format(ideology))
-path_freqs = path_freqs.loc[path_freqs['delta_t']==42]
+path_freqs = path_freqs.loc[path_freqs['delta_t']==49]
 path_freqs.head()
 
 # Plot frequency distribution of longest pathlengths (i.e., subpaths excluded)
@@ -613,7 +615,7 @@ ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
 
 fig.tight_layout()
-fig.savefig(path_to_results + 'fig_path_lengths_freqs_deltaT42{}.png'.format(ideology), dpi = 300, transparent = False, bbox_inches = 'tight')
+fig.savefig(path_to_results + 'fig_path_lengths_freqs_deltaT49{}.png'.format(ideology), dpi = 300, transparent = False, bbox_inches = 'tight')
 
 plt.show()
 
