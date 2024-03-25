@@ -1,7 +1,9 @@
 # 0. Goal: network analysis, community detection and centralities ----
 #	- Baseline aggregate network
-#   - Igraph community detection on aggregate network
-#   - Plot with visnet to quickly visualize groups
+#   - Community detection on aggregate network
+#   - Plot with visnet to visualize groups
+#   - Dynamic network analysis
+#   - Calculate centralities for dynamic network
 
 # 1. Libraries ----
 library(visNetwork)
@@ -106,14 +108,11 @@ edgelist$terminus <- as.numeric(edgelist$terminus)
 edgelist$tail     <- as.numeric(edgelist$tail)
 edgelist$head     <- as.numeric(edgelist$head)
 edgelist$weight   <- as.numeric(edgelist$weight)
-
 nodes$onset       <- as.numeric(nodes$onset)
 nodes$terminus    <- as.numeric(nodes$terminus)
 nodes$vertex.id   <- as.numeric(nodes$vertex.id)
 
 # 5. Aggregated network ----
-
-# network across the whole time period
 nw <- network(edgelist[,c(3,4,9)], # tail,head, weight
               vertex.attr = nodes[,c(1,2,5)], #vertext.id, name, color
               vertex.attrnames = c("vertex.id", "name", "color2"),
@@ -124,8 +123,6 @@ nw <- network(edgelist[,c(3,4,9)], # tail,head, weight
 
 # summary of the network object
 summary.network(nw, print.adj = FALSE)
-list.vertex.attributes(nw)
-list.edge.attributes(nw)
 
 # Plotting the static network
 plot.network(nw,
@@ -165,13 +162,6 @@ clusters <- data.frame(V(net)$community, V(net)$name) %>%
     rename(name = V.net..name,
            group = V.net..community)
 
-#nodes$name <- lapply(nodes$name, gsub, pattern = '[^[:alnum:], ]', replacement = "")
-#nodes$name <- lapply(nodes$name, function(z){ z[!is.na(z) & z != ""]})
-#nodes$name <- sapply(nodes$name, trimws)
-# switch first and last name
-#nodes$name <- lapply(nodes$name, function(z) { gsub("(\\w+),\\s(\\w+)","\\2 \\1", z)})
-#nodes$name <- as.character(nodes$name)
-
 ## merge community membership with nodes ----
 # make sure name is identical in order to properly merge the nodes with the community ids
 nodes <- nodes %>%
@@ -186,7 +176,6 @@ e <- get.edgelist(net, names = F)
 l <- qgraph::qgraph.layout.fruchtermanreingold(e, vcount = vcount(net), niter = 1000)
 
 # Cluster colors - Custom Color Palette
-# inspiration from https://www.kaggle.com/code/andradaolteanu/covid-19-sentiment-analysis-social-networks
 my_colors <- c("#05A4C0", "#85CEDA", "#D2A7D8", "#A67BC5", "#BB1C8B", "#8D266E")
 colrs <- adjustcolor(my_colors)
 
@@ -223,7 +212,7 @@ edge_viz  <- edgelist[,c(3,4,9)] %>%
 nodes_viz <- nodes[,c(1,2,6)] %>%
     rename(id = vertex.id) %>%
     mutate(shape = "dot", # customize shape of nodes : "dot", "square", "triangle"
-           shadow = TRUE, # include/exclude shadow of nodes
+           shadow = F, # include/exclude shadow of nodes
            title = id, # tooltip (html or character), when the mouse is above
            label = name, # add labels on nodes
            size = 20, # set size of nodes
@@ -235,13 +224,14 @@ nodes_viz <- nodes[,c(1,2,6)] %>%
 
 visNetwork(nodes_viz, edge_viz, width = "100%", height = 800,
            main = "Social Network Analysis Founding Fathers") %>%
-    visLayout(randomSeed = 4, improvedLayout = T) %>%
+    visLayout(randomSeed = 4, improvedLayout = F) %>%
     visOptions(nodesIdSelection = TRUE,
                selectedBy       = "group",
                highlightNearest = list(enabled = TRUE, degree = 1)) %>%
     visPhysics(stabilization = TRUE)
 
 # 6. Dynamic network ----
+# create the dynamic network
 net.dyn <- networkDynamic(
     edge.spells = data.frame("onset"          = edgelist$onset,
                              "terminus"       = edgelist$terminus,
@@ -264,25 +254,46 @@ reconcile.vertex.activity(net.dyn,
                           #mode = "expand.to.edges",
                           edge.active.default = TRUE)
 
-# check: dataframe
-df.netdyn <-  as.data.frame(net.dyn)
+# confirm that the network has been created correctly
+print(net.dyn)
+
+# create a sub-network of people who have at least 2 connections to have a meaningful network
+sub.net.dyn <- network::get.inducedSubgraph(net.dyn, v = which(degree(net.dyn) > 1))
+print(sub.net.dyn)
+plot(sub.net.dyn)
+
+# check dataframe
+sub.df.netdyn <-  as.data.frame(sub.net.dyn)
 
 # check: all TRUE?
-network.dynamic.check(net.dyn)
+network.dynamic.check(sub.net.dyn)
 
 detach("package:igraph", unload = TRUE)
 detach("package:networkD3", unload = TRUE)
 list.edge.attributes(net.dyn)
 list.vertex.attributes(net.dyn)
 
-# Collapse network to look at the specific network for a particular year
-net1802 <- network.collapse(dnet = net.dyn,
-                            at = 1802, # look at a single time point
-                            rm.time.info = FALSE,
-                            retain.all.vertices = F,
-                            rule = "latest")
-plot(net1802)
+# Plot proximity timeline
+set.seed(123)
+proximity.timeline(sub.net.dyn,
+                   default.dist = 6,
+                   mode         = 'sammon',
+                   labels.at    = 17,
+                   vertex.cex   = 4,
+                   render.edges = FALSE,
+                   chain.direction = "reverse",
+                   xaxt = "n")
 
+timeline(sub.net.dyn,
+         slice.par = list(start    = 1775,
+                          end      = 1825,
+                          interval = 1,
+                          aggregate.dur = 1,
+                          rule     = 'latest'),
+         plot.vertex.spells = FALSE)
+
+# snapshot approach by examining network-slices per year
+# Collapse network to look at a specific network for a particular year (e.g., 1802)
 par(mfrow = c(2,2), oma = c(1,1,1,1), mar = c(4,1,1,1))
 plot(network.extract(net.dyn, at = 1801), main = "Time 1801",
      displaylabels = T, displayisolates = F,label.cex = 0.6, vertex.cex = 2, pad = 0.5)
@@ -290,116 +301,64 @@ plot(network.extract(net.dyn, at = 1802), main = "Time 1802",
      displaylabels = T, displayisolates = F,label.cex = 0.6, vertex.cex = 2, pad = 0.5)
 plot(network.extract(net.dyn, at = 1803), main = "Time 1803",
      displaylabels = T, displayisolates = F,label.cex = 0.6, vertex.cex = 2, pad = 0.5)
-plot(net.dyn, main = "Collapsed",
-     displaylabels = T, displayisolates = F,label.cex = 0.6, vertex.cex = 2, pad = 0.5)
 
 # Plot a specific timepoint and remove isolates
 par(mfrow = c(1,2))
 net.dyn %>% network.extract(at = 1801) %>% plot(displayisolates = F,displaylabels = F)
 net.dyn %>% network.extract(at = 1802) %>% plot(displayisolates = F)
 
-#look into the weights
-get.edge.attribute.active(net1780,'weight',at = 1780)
-get.edge.value.active(net.dyn, 'weight',
-                      onset        = 1797,
-                      terminus     = 1798,
-                      dynamic.only = TRUE)
+# 7. Centralities of dynamic network ----
+##time series of centralities
 
-# 7. Centralities ----
+## A) Graph-Level statistics through time ----
+par(mfrow = c(1,1))
 
-# Static (per year)
-# centrality scores (without weights)
-sna::degree(net1802)
-sna::degree(net1802,cmode = "indegree")
-sna::degree(net1802,cmode = "outdegree")
-
-# centrality scores (with weights)
-sna::degree(as.edgelist.sna(net1802,attrname = "weight"))
-
-# Dynamic (over the years)
-
-# rescale=TRUE argument -> If the effective size of the network is changing due
-# to vertex activity, this would allow the sna metric to renormalize with network
-# size to reduce possible variations due to making comparisons between networks
-# of varying size
-prestScores <- tsna::tSnaStats(net.dyn,'gtrans')
-
-hist(edgeDuration(net.dyn),,xlim=c(-2,2))
+# Plot formation of edges over time
+plot(tEdgeFormation(net.dyn, time.interval = 1))
 
 # the tsna package provides the function tSnaStats() as way to apply
 # metrics from the sna package at multiple time points over a
-# networkDynamic object and produce the result as a time-series. However,
-# tSnaStats(net.dyn,'degree') does not account for edge weights. See
-# also https://stackoverflow.com/questions/47403869/cant-get-edge-weights-to-count-in-temporal-network-centrality-scores
+# networkDynamic object and produce the result as a time-series.
 
-# In weighted networks, the degree centrality is calculated as the sum of
-# weights assigned to the node's direct connections and represents the node strength
-# See article: Node centrality in weighted networks: Generalizing degree and shortest paths
+colpal <- RColorBrewer::brewer.pal(4, "Dark2")
 
-unique_nodes <- length(unique(nodes$name))
-start_year     <- min(edgelist$onset)
-end_year       <- max(c(edgelist$onset,edgelist$terminus))
-range_of_years <- (end_year - start_year) + 1
+# graph level density
+Density <-  tSnaStats(
+    nd     = net.dyn,
+    snafun = 'gden', # "gden" to show graph density
+    start  = 1725,
+    end =    1836,
+    time.interval = 1,
+    aggregate.dur = 1)
+plot(Density, col = colpal[2], lwd = 2, main = "Network density during the study period")
 
-# weighted.degrees will contain the weighted degrees per year for each node
-# start with empty matrix (time-periods * nodes)
-weighted.degrees <- matrix(0, range_of_years, unique_nodes)
-dim(weighted.degrees)
+# reciprocity (ratio of reciprocated edges to asymmetric edges)
+Reciprocity_prop <-  tSnaStats(
+    nd= net.dyn,
+    snafun ='grecip',
+    measure = 'edgewise',
+    time.interval = 1,
+    aggregate.dur = 1)
+plot(Reciprocity_prop, col = colpal[2], lwd = 2, main = "Proportion of reciprocated edges during the study period")
 
-#relmat <- matrix(0, seq(from = start_year, to = end_year), unique_nodes)
-rownames(weighted.degrees) <-  seq_along(start_year:end_year) + start_year - 1
-colnames(weighted.degrees) <- unique(nodes$name)
+Reciprocity <-  tSnaStats(
+    nd = net.dyn,
+    snafun ='grecip',
+    time.interval = 1,
+    aggregate.dur = 1)
+plot(Reciprocity, col = colpal[3], lwd = 2, main = "Network reciprocity")
 
-weighted.degrees <- weighted.outdegrees <- weighted.indegrees
+Dyad.census <- tSnaStats(nd = net.dyn, 'dyad.census')
+plot(Dyad.census, col = colpal[2], lwd = 2, main = "Network dyads during the study period")
 
-#iterate over time periods
-for (i in start_year:end_year) {
-    temp <- network.collapse(net.dyn, at = i, rm.time.info = FALSE,  rule = "latest")
-    #save results in predefined matrix
-    weighted.degrees[i - start_year,seq(1:unique_nodes)] <- sna::degree(as.matrix(temp, attrname = "weight"))
-    weighted.betweenness[i - start_year,seq(1:unique_nodes)] <- sna::betweenness(as.matrix(temp, attrname = "weight"))
-    #weighted.indegrees[i - start_year,seq(1:unique_nodes)] <- sna::degree(as.matrix(temp, attrname = "weight"),cmode = "indegree")
-    #weighted.outdegrees[i - start_year,seq(1:unique_nodes)] <- sna::degree(as.matrix(temp, attrname = "weight"),cmode = "outdegree")
-}
+# show number of complete, reciprocated dyads
+Dynamicmutuality <- tSnaStats(
+    nd = net.dyn,
+    snafun = 'mutuality',
+    time.interval = 1,
+    aggregate.dur = 1)
+plot(Dynamicmutuality,col = colpal[2], lwd = 2, main = "number of complete reciprocated dyads during the study period")
 
-# replace 0 with NA
-weighted.degrees[weighted.degrees == 0]       <- NA
-weighted.indegrees[weighted.indegrees == 0]   <- NA
-weighted.outdegrees[weighted.outdegrees == 0] <- NA
-
-# remove rows which  all have NA's
-weighted.degrees <- weighted.degrees[rowSums(is.na(weighted.degrees)) != ncol(weighted.degrees), ]
-weighted.indegrees <- weighted.indegrees[rowSums(is.na(weighted.indegrees)) != ncol(weighted.indegrees), ]
-weighted.outdegrees <- weighted.outdegrees[rowSums(is.na(weighted.outdegrees)) != ncol(weighted.outdegrees), ]
-
-#scale the weighted degrees
-#tets <- t(scale(t(weighted.degrees)))
-
-scaled.degrees    <- round(scrime::rowScales(weighted.degrees),3)
-scaled.indegrees  <- round(scrime::rowScales(weighted.indegrees),3)
-scaled.outdegrees <- round(scrime::rowScales(weighted.outdegrees),3)
-
-scaled.degrees <- as.data.frame(weighted.degrees)
-scaled.degrees$year <- rownames(scaled.degrees)
-
-df <- scaled.degrees %>% gather(key = "variable", value = "value", -year)
-head(df)
-
-# plot scaled weighted degrees (in and outdegree)
-# xas time, y-as weighted degrees (z-scores), with each line
-# representing a FF
-df7 <- df %>% filter(variable %in% top7)
-
-ggplot2::ggplot(df7, aes(x = year, y = log(value), group=variable)) +
-    geom_line(aes(color = variable)) +
-    viridis::scale_fill_viridis() +
-    #scale_color_manual(values = c("darkred", "steelblue","gold","yellow","orange","green","purple")) +
-    theme_minimal()
-
-# Apply the sna package’s static graph- and vertex-level network descriptive statistics at multiple time points
-# Rolling- measures using Sliding Time Windows (careful here with interference from igraph; detach igraph)
-
-# 8. Graph-Level statistics through time ----
 dynamicDegree <- tSnaStats(
     net.dyn,
     snafun        = "centralization",
@@ -409,10 +368,9 @@ dynamicDegree <- tSnaStats(
     aggregate.dur = 20,
     FUN           = "degree"
 )
-
 plot(dynamicDegree)
 
-# 9. Vertex-level statistics through time ----
+## B) Node-Level statistics through time ----
 dynamicVertex <- tSnaStats(
     net.dyn,
     snafun        = "degree",
@@ -423,68 +381,7 @@ dynamicVertex <- tSnaStats(
 )
 plot(dynamicVertex)
 
-# 10. Timelines and Time Prisms ----
-# Plot proximity timeline
-set.seed(123)
-
-proximity.timeline(net.dyn,
-                   default.dist = 6,
-                   mode         = 'sammon',
-                   labels.at    = 17,
-                   vertex.cex   = 4,
-                   render.edges = FALSE,
-                   #vertex.col = mycol[factor(sp_attr$SWSN_MacroGroup)],
-                   chain.direction = "reverse",
-                   xaxt = "n")
-
-timeline(net.dyn,
-         slice.par = list(start    = 1775,
-                          end      = 1825,
-                          interval = 1,
-                          aggregate.dur = 1,
-                          rule     = 'latest'),
-         plot.vertex.spells = FALSE)
-
-
-# 11. Density over the years ----
-classNets <- get.networks(net.dyn,
-                          start=1770,
-                          end=1826,
-                          time.increment=1,
-                          rule='latest')
-
-classDensity <- sapply(classNets, network.density)
-
-plot(classDensity,type='l',xlab='network slice #',ylab='density')
-
-colpal <- RColorBrewer::brewer.pal(4, "Dark2")
-tSnaStats(net.dyn, snafun = "gden") %>% # "gden" to show graph density
-    plot(col = colpal[2], lwd = 2, main = "Network density during the study period")
-
-# Plot formation of edges over time
-plot(tEdgeFormation(net.dyn, time.interval = 1))
-
-plot(tSnaStats(net.dyn, snafun = 'gtrans'))
-
-tSnaStats(net.dyn, snafun = "grecip") %>%
-    plot(main = "Network Reciprocity", col = colpal[3], lwd = 2)
-
-# 12. Animation ----
-filmstrip(net.dyn, displaylabels=F, mfrow=c(2, 5),
-          slice.par=list(start=1775, end=1824, interval=5,
-                         aggregate.dur=5, rule='any'))
-
-## Plot static “filmstrip” sequence ----
-filmstrip(net.dyn,
-          displaylabels = FALSE,
-          #mfrow=c(1,6),
-          #frames = 5,
-          slice.par = list(start = 1780,
-                           end = 1805,
-                           interval = 1,
-                           aggregate.dur = 1,
-                           rule = 'all'))
-
+# 8. Animation of temporal network ----
 # Calculate how to plot an animated version of the dynamic network
 # To reveal slower structural patterns we can make the aggregation period
 # even longer, and let the slices overlap (by making interval less than
@@ -504,7 +401,6 @@ compute.animation(
 render.d3movie(
     net.dyn,
     usearrows       = F,
-    #tween.frames    = 30,
     displaylabels   = TRUE,
 
     label           = "name",
@@ -522,11 +418,6 @@ render.d3movie(
     # vertex.cex      = function(slice){(sna::betweenness(slice) + 1)},
     vertex.cex      = function(slice){log(sna::degree(as.matrix(slice, attrname = "weight")))*2},
     vertex.border   = "#333333",
-    # vertex.cex      = scales::rescale(degree(n1), to = c(1, 5))
-    # vertex.cex      = function(slice){slice%v%'size' * 3},
-    # vertex.cex      = function(slice){(degree(slice)+1)/5},
-    # vertex.cex      = (net.dyn %v% "size.active"),
-
     vertex.col      = "color2",
     vertex.border   = "#333333",
 
@@ -536,292 +427,7 @@ render.d3movie(
     edge.tooltip      = function(slice) {
         paste("<b>Weight:</b>", (slice %e% "weight"))},
 
-    #output.mode   = "htmlWidget",
     launchBrowser = TRUE, filename = "HGEAR.html",
     render.par    = list(tween.frames = 15, show.time = F),
-    slice.par     =list(start=0, end=100, interval = 4, aggregate.dur = 4, rule='any'))
-
-# 13. Reachability ----
-
-# https://github.com/AFMessamore42/the-civic-elite/blob/main/long_2010s.Rmd
-# https://github.com/AFMessamore42/the-civic-elite/blob/f53dfa0a6b54cfdef1ff49875148b08ddf59e5e1/long_2010s.Rmd
-# https://github.com/jalapic/SNA_workshop/blob/c42f47887cbf574b8d92e772c5156c1a82941bc1/day4/027_tsna.R
-# https://github.com/statnet/tsna/blob/9e07a36cb0055d2659a5bdebc68f2294737e9147/vignettes/tsna_vignette.Rmd
-
-
-
-
-# The reachability of a person help us to identify important nodes in the network
-# that may have a key role in the spread of ideas. Forward reachability ("fwd")
-# refers to all the nodes than can be reached from a given node and backward
-# reachability ("bkwd") refers to those nodes that reach a given node $v_i$.
-# We can visualize the distribution of the forward and backward reachability
-# using boxplots
-
-# see https://cadms-ucd.github.io/spatialnetworks_ws/Lab4.html
-
-#forward path metrics
-#(see https://statnet.org/Workshops/ndtv_workshop.html#forward-path-metrics)
-
-# Calculate and store the sizes of forward and backward reachable sets for each node
-#TODO: check graph.step.time option (set to 1?)
-fwd_reach  <- tReach(net.dyn, direction = "fwd",graph.step.time = 0)
-bkwd_reach <- tReach(net.dyn, direction = "bkwd",graph.step.time = 0)
-
-# what fraction of the network could each vertex reach?
-tReach(net.dyn)/network.size(net.dyn)
-
-max_reachable_sets <- max(fwd_reach)
-
-par(mar=c(2,4,2,2))
-boxplot(fwd_reach, bkwd_reach, col = "lightgreen", horizontal = T,
-        yaxt = 'n', main = "Reachability of persons")
-axis(2, at = c(1,2), labels = c("Fwd", "Bwd"), las=2, lty = 0)
-
-#Let's have a look at the persons with the highest forward reachability
-all_fwd_bkwd <- data.frame("fwd"         = fwd_reach,
-                           "bkwd"        = bkwd_reach,
-                           "name"        = nodes$name,
-                           "id"          = nodes$vertex.id)
-
-all_fwd_bkwd %>% arrange(desc(fwd)) %>% head(10)
-
-## Compare forward and backward reachability ----
-# Any interesting relationships between both types of reachability?
-plot(fwd_reach, bkwd_reach, xlab = "Fwd", ylab = "Bwd", pch = 16,
-     col = rgb(0, 155, 50, max = 255, alpha = 100))
-
-# The following code generates a plot comparing the forward
-# and backward reachability of each author. Authors with
-# exceptionally large forward or backward reachability are
-# labelled for convenience
-
-ggplot(all_fwd_bkwd, aes(x = fwd,y = bkwd)) +
-    geom_point(color = "black", position = "jitter") +
-    ggrepel::geom_label_repel(
-        data = all_fwd_bkwd %>% filter(fwd > 15 | bkwd > 40 | (fwd > 15 & bkwd > 30)),
-        aes(label = name),
-        #nudge_x = 1, nudge_y = 0.5,
-        check_overlap = T
-    ) +
-    hrbrthemes::theme_ipsum(
-        axis_title_size = 12,
-        axis_text_size = 11,
-        plot_margin = margin(0, 0, 0, 0),
-        grid_col = "#cccccc",
-        grid = TRUE,
-        axis_col = "#000000",
-        axis = TRUE,
-        ticks = FALSE
-    ) +
-    theme(
-        plot.title = element_text(size = 15),
-        axis.title = element_text(size = 10,vjust = 0.5),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank()
-    ) +
-    ggtitle("Backward- vs Forward-Reachable Sets") +
-    ylab("size of backward-reachable set") +
-    xlab("size of forward-reachable set") +
-    scale_x_continuous(breaks = seq(0,270, by = 15))
-
-# Calculate and plot the forward reachable paths of specific person
-# TODO: check settings
-
-network::get.vertex.attribute(net.dyn, "vertex.names")[1]
-
-# Path Visualizations
-# Examining node id = 1
-v1FwdPath <- tPath(net.dyn,
-                   v = 1,
-                   direction = "fwd",
-                   start = 1770,
-                   #start = min(nodes$onset),
-                   end = max(nodes$terminus))
-
-is.tPath(v1FwdPath)
-print(v1FwdPath)
-
-# Examining node id = 4
-v4FwdPath <- tPath(net.dyn,
-                   v = 4,
-                   direction = "fwd",
-                   start = 1770,
-                   #start = min(nodes$onset),
-                   end = max(nodes$terminus))
-
-## Static visualizations
-
-plot(v1FwdPath,displaylabels = TRUE)
-#plot(v1FwdPath, edge.lwd = 1, layout.par = list(gv.engine = 'dot'))
-
-# Visualize the paths in the full network
-coords <- plot(v1FwdPath, main="Forward Reachable Set from John Adams", cex.main = .5)
-
-par(mfrow=c(1,2)) # set up side-by-side plot
-plotPaths(net.dyn, v1FwdPath,
-          coord = coords,
-          main = "fwd path from v1 Adams",
-          label.cex = .5, cex.main=2,
-          vertex.cex = 2, displaylabels = F,
-          vertex.col = colpal[1])
-
-plotPaths(net.dyn, v4FwdPath,
-          coord = coords,
-          main = "fwd path from v4 Jefferson",
-          label.cex = .5, cex.main=2,
-          vertex.cex = 2, displaylabels = F,
-          vertex.col = colpal[1])
-
-par(mfcol=c(1,1)) # turn off side-by-side plots
-
-# A better way to visualize the paths trough the time period is using the
-# function transmissionTimeline(). In this visualization, the x axis
-# represents the time when the event happened and the y axis represents
-# the generation or steps that happened to reach that node
-# list.vertex.attributes(net.dyn)
-
-# check time period -> due to timing in nodes df?
-transmissionTimeline(v1FwdPath,
-                     #                    time.attr = net.dyn,
-                     jitter = T,
-                     main   = 'Earliest forward path from vertex 1[John Adams]',
-                     displaylabels = T)
-
-# We can also see the backward reachability, which represents the set of nodes
-# that reach a specific node over a time period
-# Calculate and plot the backward reachable paths of node 6
-v1BkwdPath <- tPath(net.dyn, v = 1, direction = "bkwd",  type = 'latest.depart')
-v4BkwdPath <- tPath(net.dyn, v = 4, direction = "bkwd",  type = 'latest.depart')
-plot(v1BkwdPath, edge.col = colpal[3])
-
-plotPaths(net.dyn,v1BkwdPath, path.col = rgb(0, 97, 255, max = 255, alpha = 166),
-          displaylabels = TRUE,
-          edge.label.col = rgb(0,0,0,0),
-          vertex.col = "white"
-)
-
-
-# Another way to visualize the network activity is to show the time points
-# when each of the nodes was active. In the following plot, the upper part
-# represents the presence of the node in the network and the lower part
-# represents the activity of the node in the network.
-timeline(net.dyn)
-
-## Dynamic Visualization
-
-# pull out the vertex.ids and tdist (onset must be greater than this)
-actor <- as.data.frame(v1FwdPath) %>%
-    mutate(vertex.id = row_number()) %>%
-    filter(tdist != 'Inf') %>%
-    select(vertex.id, tdist)
-
-# tail must be an element of actor$vertex.id and
-# the corresponding onset must be greater or equal to the tdist associated with that vertex.id
-es.actor <- edgelist %>%
-    right_join(actor, by = c("tail" = "vertex.id")) %>%
-    filter(onset>=tdist)
-
-# filter nodes--keep only those in edgelist
-vs2 <- nodes %>%
-    filter(vertex.id %in% es.actor$tail | vertex.id %in% es.actor$head) %>%
-    mutate(vertex.id = as.numeric(factor(name)),
-           att = ifelse(onset<10,0,1))
-
-# assign new node ids (must be inceasing start with 1)
-node_ids2 <- vs2 %>% select(vertex.id, name) %>% unique()
-
-# match edgelist with new node ids
-es2 <- es.actor %>%
-    select(-head, -tail) %>%
-    left_join(node_ids2, by=c('authors'='name')) %>%
-    rename(head = vertex.id) %>%
-    left_join(node_ids2, by=c('recipients'='name')) %>%
-    rename(tail = vertex.id) %>%
-    filter(head %in% node_ids2$vertex.id & tail %in% node_ids2$vertex.id) %>%
-    select(onset,terminus,tail,head,authors,recipients,text,edge_type)
-
-
-# create dynamic network
-net2.dyn <- networkDynamic(edge.spells=es2,
-                           vertex.spells=vs2,
-                           create.TEAs=TRUE,  # create dynamic attributes
-                           edge.TEA.names=c('from','to','text','edge_type'),  # list dynamic edge attributes in order starting w/ col 5 of es
-                           vertex.TEA.names=c('username','description','location','verified','follower_count','indegree','att')) # list dynamic node attributes in order starting w/ col 4 of vs
-
-
-# length of these edgelists needs to match
-nrow(es2)
-nrow(as.data.frame(net2.dyn))
-
-
-# set time interval
-net2.dyn <- compute.animation(net2.dyn,
-                              slice.par=list(start=min(es2$onset),
-                                             end=max(es2$onset),
-                                             interval=1,  # currently daily, set to 7 for weekly
-                                             aggregate.dur=1,  # currently daily, set to 7 for weekly
-                                             rule="earliest"))
-
-# dynamic visualization
-render.d3movie(net2.dyn,
-               usearrows = FALSE,
-               edge.lwd = 2,
-               edge.col = 'grey',
-               edge.tooltip = function(slice) {     # display edge attributes when you click on an edge
-                   paste("<b>From:</b>", (slice %e% "from"),      "<br>",
-                         "<b>To:</b>",   (slice %e% "to"),        "<br>",
-                         "<b>Type:</b>", (slice %e% "edge_type"), "<br>",
-                         "<b>Text:</b>", (slice %e% "text"))
-               },
-               vertex.cex = .3, # add sizing by attrbute
-               # vertex.cex = .3, # add sizing by attrbute
-               vertex.col =  function(slice) {
-                   case_when((slice %v% "verified" == TRUE) ~ 'green',  # verified nodes are green, all others are grey
-                             (slice %v% "verified" == FALSE) ~ 'grey',
-                             is.na(slice %v% "verified") ~ 'grey')
-               },
-               vertex.sides =  function(slice) {
-                   case_when((slice %v% "name" == "John Adams") ~ 3,   # John Adams is a triangle
-                             (slice %v% "name" != "John Adams") ~ 50)  # everyone else is a circle
-               },  # change node shapes by attribute
-               vertex.tooltip = function(slice) {     # display node attributes when you click on an node
-                   paste("<b>name:</b>",    (slice %v% "name") ,    "<br>",
-                         "<b>Location:</b>",    (slice %v% "location") ,    "<br>",
-                         "<b>Description:</b>", (slice %v% "description") , "<br>",
-                         "<b>Followers:</b>",   (slice %v% "follower_count"))
-               },
-               main = 'John Adams forward paths',
-               output.mode = 'htmlWidget')
-
-# function to extract the transmission tree as a directed network
-# https://statnet.org/workshop-ndtv/ndtv_workshop.html
-
-transTree <- function(net){
-    # for each vertex in net who knows
-    knowers <- which(!is.na(get.vertex.attribute.active(net,
-                                                        'knowsRumor',at=Inf)))
-    # find out who the first transmission was from
-    transTimes<-get.vertex.attribute.active(net,"heardRumorFrom",
-                                            onset=-Inf,terminus=Inf,return.tea=TRUE)
-    # subset to only ones that know
-    transTimes<-transTimes[knowers]
-    # get the first value of the TEA for each knower
-    tellers<-sapply(transTimes,function(tea){tea[[1]][[1]]})
-    # create a new net of appropriate size
-    treeIds <-union(knowers,tellers)
-    tree<-network.initialize(length(treeIds),loops=TRUE)
-    # copy labels from original net
-    set.vertex.attribute(tree,'vertex.names',treeIds)
-    # translate the knower and teller ids to new network ids
-    # and add edges for each transmission
-    add.edges(tree,tail=match(tellers,treeIds),
-              head=match(knowers,treeIds) )
-    return(tree)
-}
-
-windTree <- transTree(net.dyn)
-
-plot(windTree,
-     displaylabels = TRUE)
+    slice.par     = list(start = 0, end = 100, interval = 4, aggregate.dur = 4, rule = 'any'))
 
