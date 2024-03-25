@@ -14,6 +14,7 @@ w2v_models/delegates/raw
 
 # Ignore raw output
 output/figures/topic_analysis
+output/figures
 
 # Ignore packages.txt
 packages.txt
