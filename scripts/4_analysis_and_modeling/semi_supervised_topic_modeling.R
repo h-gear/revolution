@@ -237,18 +237,16 @@ tokens_cap <- tokens_select(tokens,
                             case_insensitive = TRUE,
                             padding = TRUE)
 
-# Discover multi-word expressions through statistical scoring of the associations of adjacent words
+# Discover multi-word expressions through statistical scoring of the
+# associations of adjacent words
 tstat_col_cap <- textstat_collocations(tokens_cap,
                                        min_count = 10,
                                        tolower   = F)
-
-head(tstat_col_cap, 20)
 
 tsta <- tstat_col_cap %>% filter(count > 50) %>%
   arrange(desc(count)) %>%
   select(collocation) %>% pull()
 
-head(tsta,100)
 sort(tsta)
 
 # Convert multi-word expressions to tokens
@@ -266,8 +264,8 @@ tokens <- tokens_remove(tokens,
                         padding = TRUE)
 
 ## 3. Lemmatization ----
+
 # Get lemma table
-#lemma <- read.delim("https://github.com/michmech/lemmatization-lists/raw/master/lemmatization-en.txt", sep = "\t")
 lemma <- read.delim("data/external/lemmatization-en.txt", sep = "\t")
 colnames(lemma) <- c("base", "variant")
 lemma$base    <- tolower(lemma$base)
@@ -287,7 +285,7 @@ token_list <- lapply(tokens_lemmatized, unlist)
 # Count occurrences of the specified word in the tokens list
 word_counts <- sapply(token_list, function(tokens) sum(tokens == "plantation"))
 # Total occurrences of the word "plantation"
-sum(word_counts) # 1335
+sum(word_counts) # 1320
 
 ## 4. Combine original letters with cleaned letter texts ----
 df_texts_cleaned <- data.frame(
@@ -299,6 +297,8 @@ df_texts_cleaned <- data.frame(
 texts <- texts %>%
   mutate(id = as.numeric(id)) %>%
   left_join(df_texts_cleaned, by = "id")
+
+saveRDS(texts, file = "data/processed/founders/texts.rds")
 
 ## 5. Create DFM ----
 
@@ -784,10 +784,21 @@ dev.off()
 # see also https://tm4ss.github.io/docs/Tutorial_6_Topic_Models.html#1_Model_calculation
 
 # overall overview of topic prevalence by year
+
+# calculate the mean prevalence of each topic over the years
 theta_mean_by_year_by <- by(lda$theta, texts$year, colMeans)
+
+# combine the mean topic prevalences calculated for each year into a single
+#matrix, making it easier to visualize the temporal trends in topic prevalence
 theta_mean_by_year    <- do.call("rbind", theta_mean_by_year_by)
+
+# all the years in the data
 years                 <- levels(factor(texts$year))
+
+# convert the matrix of mean topic prevalences into a time series object,
+# with the first year specified as the starting point
 ts                    <- ts(theta_mean_by_year, start = as.integer(years[1]))
+
 
 topic_table <- topic_table %>%
   mutate(labels = rownames(topic_table))
@@ -858,18 +869,21 @@ write.csv(letters_with_topics,"data/processed/founders/letters_with_topic_info.c
 
 # Show distribution over topics for sample of letters. See also
 # https://tm4ss.github.io/docs/Tutorial_6_Topic_Models.html#1_Model_calculation
-letters_with_topics %>% sample_n(20) %>%
+tiff(filename = "output/figures/Topic probability distribution per letter.tiff", width = 8000, height = 4000, res = 450)
+
+letters_with_topics %>% sample_n(10) %>%
   select(id, matches("^[0-9]")) %>%
   pivot_longer(-id, names_to = 'topic',values_to = 'probability') %>%
   ggplot(aes(x = as.factor(id), y = probability)) +
   geom_bar(aes(fill = topic), stat = 'identity') + coord_flip() +
-  ggtitle('Topic probability distribution per review') + theme_minimal() +
+  ggtitle('Topic probability distribution per letter') + theme_minimal() +
   theme(legend.position = "right",
         legend.text     = element_text(size = 6),
         legend.title    = element_blank(),
         plot.title      = element_text(hjust = 0.5, size = 12),
         axis.title      = element_text(size = 8),
         axis.text       = element_text(size = 8)) + scale_fill_viridis_d(option = "inferno")
+dev.off()
 
 # Create dataframe for animated wordcloud
 yr_topic_term_freq <- letters_with_topics %>%
@@ -915,6 +929,10 @@ letters_with_topics_ff <- letters_with_topics %>%
 
 table(letters_with_topics_ff$authors)
 
+# this plot provides a visual representation of how the probabilities of the
+# selected topics vary among the selected founding fathers, allowing for insights
+# into their respective political leanings and interests as reflected in their
+# letters
 tiff(filename = "output/figures/Topic probability distribution for political letters written by founding fathers.tiff", width = 6000, height = 4000, res = 450)
   par(mfrow = c(1,1))
 
@@ -938,7 +956,7 @@ tiff(filename = "output/figures/Topic probability distribution for political let
           axis.text       = element_blank()) + ylim(c(0,20))
 dev.off()
 
-# Interpretation ----
+# Interpretation
 # In the context of topic probability distributions, high probability values
 # indicate the likelihood that a particular topic is present or dominant in a
 # given document or dataset. These probabilities are typically produced by topic
