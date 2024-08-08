@@ -159,7 +159,6 @@ base_model_pi <- plot_pi(out, show_topic = c(1,2))
 # along with the top three words associated with the topic
 plot_topicprop(out,
                show_topic = c(1,2),
-               #show_topic = 1:31,
                show_topwords = TRUE,
                n = 5
                )

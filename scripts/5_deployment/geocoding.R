@@ -18,7 +18,7 @@ ecco <- readRDS(file = "data/processed/ecco/ecco_geo_ref.rds") %>%
         rename(city = place_of_publication)
 
 # read evans data with information on coordinates
-evans <- readRDS(file = "data/processed/evans/ecco_geo_ref.rds")
+#evans <- readRDS(file = "data/processed/evans/evans_geo_ref.rds")
 
 # combine city, state and country information together to obtain the coordinates
 # via tidygeocoder
