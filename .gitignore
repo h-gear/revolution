@@ -9,6 +9,9 @@
 # Ignore R's renv-related files
 renv/
 
+# ignore documentation builds
+site/
+
 # Ignore shico w2v models
 w2v_models/delegates/raw
 
