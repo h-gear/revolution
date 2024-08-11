@@ -1,5 +1,22 @@
-site_name: MkLorum
+site_name: American revolution
+site_url: https://revolution.readthedocs.io
+repo_url: https://github.com/h-gear/revolution
+repo_name: GitHub
+
 nav:
   - Home: index.md
-  - About: about.md
-theme: readthedocs
+  - Contributing: CONTRIBUTING.md
+  - Code of Conduct: CODE_OF_CONDUCT.md
+  - 🔗 Source code: https://github.com/h-gear/revolution
+  - 🔗 Issues: https://github.com/h-gear/revolution/issues
+
+theme:
+  name: readthedocs
+  
+extra_javascript:
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+watch:
+  - scripts
+  - docs/
