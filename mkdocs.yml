@@ -5,17 +5,59 @@ repo_name: GitHub
 
 nav:
   - Home: index.md
-  - Contributing: CONTRIBUTING.md
-  - Code of Conduct: CODE_OF_CONDUCT.md
-  - 🔗 Source code: https://github.com/h-gear/revolution
-  - 🔗 Issues: https://github.com/h-gear/revolution/issues
-
+  - Source code: https://github.com/h-gear/revolution
+  - Issues: https://github.com/h-gear/revolution/issues  
+  - Background of the project:
+    - Hgear: Background/BACKGROUND.md
+    - Methods: Background/METHODS.md
+    - Data: Background/DATA.md
+  - Getting Started:
+    - Installation: Started/INSTALLATION.md
+    - Usage: Started/USAGE.md
+    - Tutorials: Started/TUTORIALS.md    
+  - Analyses:
+    - Introduction: Analyses/INTRODUCTION.md
+    - Data collection: Analyses/COLLECTION.md
+    - Data preparation: Analyses/PREPARATION.md
+    - Exploratory analysis: Analyses/EXPLORE.md
+    - Modeling: Analyses/MODELING.md
+    - Geo spatial: Analyses/GEO.md
+  - Developers:
+    - Code of Conduct: CODE_OF_CONDUCT.md    
+    - Contributing guidelines: CONTRIBUTING.md    
+  - About:
+    - How to Cite: About/CITE.md
+    - Contact information: About/CONTACT.md
+    - In action: About/ACTION.md    
+     
 theme:
   name: readthedocs
   
 extra_javascript:
   - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+plugins:
+  - search
+  - mkdocstrings:
+      # https://mkdocstrings.github.io/usage/
+      handlers:
+        python:
+          import:
+          - https://docs.python.org/3/objects.inv
+          - https://numpy.org/doc/stable/objects.inv
+          - https://docs.scipy.org/doc/scipy/objects.inv
+          - https://pandas.pydata.org/docs/objects.inv
+          options:
+            docstring_style: numpy
+            docstring_options:
+              ignore_init_summary: yes
+            show_submodules: no
+            show_source: true
+            docstring_section_style: list
+            members_order: alphabetical
+            show_category_heading: no
+            merge_init_into_class: yes
 
 watch:
   - scripts
