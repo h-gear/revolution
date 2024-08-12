@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://revolution.readthedocs.io/Analyses/EXPLORE/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Exploratory analysis - American revolution</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Exploratory analysis";
+        var mkdocs_page_input_path = "Analyses\\EXPLORE.md";
+        var mkdocs_page_url = "/Analyses/EXPLORE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> American revolution
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution">Source code</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution/issues">Issues</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Background of the project</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/BACKGROUND/">Hgear</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/METHODS/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/DATA/">Data</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Started/INSTALLATION/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Data preparation and EDA</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../COLLECTION/">Scraping Letters of Delegates to Congress</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../FFCOLLECTION/">Scraping Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../PREPARATION_DEL/">Data preparation Delegates of Congres</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../PREPARATION_FF/">Data preparation Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Exploratory analysis</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#workflow">Workflow</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-load-libraries">1. Load Libraries</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-load-preprocessed-data">2. Load Preprocessed Data</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-plot-aggregated-network">3. Plot Aggregated Network</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#select-and-prepare-data">Select and Prepare Data</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#create-and-simplify-network">Create and Simplify Network</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#visualize-full-network">Visualize Full Network</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#focus-on-subgraphs">Focus on Subgraphs</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#cluster-analysis">Cluster Analysis</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#customize-visualization">Customize Visualization</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#4-save-network-plot">4. Save Network Plot</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#conclusion">Conclusion</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../WORD2VEC/">Word2Vec models</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Modeling</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/TOPICANALYSIS/">Semi-supervised topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/DYNTOPICANALYSIS/">Dynamic topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/SENTIMENT/">Sentiment analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/NETWORK/">Network modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/MODELING/">Time-respecting path-based network analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/GEO/">Geo-spatial model</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developers</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT/">Code of Conduct</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING/">Contributing guidelines</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CITE/">How to Cite</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CONTACT/">Contact information</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/ACTION/">In action</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">American revolution</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Data preparation and EDA</li>
+      <li class="breadcrumb-item active">Exploratory analysis</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/h-gear/revolution/edit/master/docs/Analyses/EXPLORE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="aggregated-network-visualization">Aggregated network visualization</h1>
+<h2 id="overview">Overview</h2>
+<p>This document details the workflow for plotting an aggregated network using data from the Letters of Delegates to Congress (1774-1789). The goal is to visualize the network of interactions among delegates, highlighting their communication patterns and connections.</p>
+<h2 id="workflow">Workflow</h2>
+<h3 id="1-load-libraries">1. Load Libraries</h3>
+<p>Start by loading the necessary libraries:</p>
+<ul>
+<li><strong><code>tidyverse</code></strong>: For data manipulation and visualization.</li>
+<li><strong><code>igraph</code></strong>: For network analysis and plotting.</li>
+</ul>
+<h3 id="2-load-preprocessed-data">2. Load Preprocessed Data</h3>
+<ul>
+<li>Import the preprocessed dataset using <code>readRDS</code>. This dataset, <code>combined_df2</code>, contains the data required for plotting the network.</li>
+</ul>
+<h3 id="3-plot-aggregated-network">3. Plot Aggregated Network</h3>
+<h4 id="select-and-prepare-data">Select and Prepare Data</h4>
+<ul>
+<li>Extract relevant columns (<code>sender_id</code> and <code>receiver_id</code>) from the dataset.</li>
+<li>Filter out rows with missing <code>sender_id</code> or <code>receiver_id</code>.</li>
+<li>Group the data by <code>sender_id</code> and <code>receiver_id</code> and calculate the weight of each edge by counting occurrences.</li>
+</ul>
+<h4 id="create-and-simplify-network">Create and Simplify Network</h4>
+<ul>
+<li>Convert the prepared data into a network object using <code>igraph::graph_from_data_frame</code>.</li>
+<li>Simplify the network by removing loops and multiple edges between the same nodes to streamline the visualization.</li>
+</ul>
+<h4 id="visualize-full-network">Visualize Full Network</h4>
+<ul>
+<li>Plot the entire network to observe the overall structure and connectivity.</li>
+</ul>
+<h4 id="focus-on-subgraphs">Focus on Subgraphs</h4>
+<ul>
+<li>Create a subset of the network with nodes having a degree greater than a specified threshold (e.g., degree &gt; 20).</li>
+<li>Define neighbors for main vertices and include them in an induced subgraph for focused analysis.</li>
+</ul>
+<h4 id="cluster-analysis">Cluster Analysis</h4>
+<ul>
+<li>Use the Louvain method to detect communities in the network. Apply modularity-based clustering to identify significant groups within the network.</li>
+<li>Assign community membership to vertices and plot the network with these clusters highlighted.</li>
+</ul>
+<h4 id="customize-visualization">Customize Visualization</h4>
+<ul>
+<li>Create a custom color palette for different clusters.</li>
+<li>Calculate node strength, which reflects the sum of edge weights connected to each node, and adjust node sizes accordingly.</li>
+<li>Plot the network with customized vertex colors, sizes, and labels, and highlight specific groups if needed.</li>
+</ul>
+<h3 id="4-save-network-plot">4. Save Network Plot</h3>
+<ul>
+<li>Save the final visualization of the network plot to a file (implementation details to be added).</li>
+</ul>
+<h2 id="conclusion">Conclusion</h2>
+<p>This workflow provides a comprehensive approach to visualizing and analyzing the network of interactions among delegates. By focusing on network structure, subgraphs, and community detection, it allows for a detailed exploration of communication patterns and relationships. The use of customized visual elements and clustering techniques enhances the clarity and interpretability of the network analysis, providing valuable insights into the connections between historical figures.</p>
+<h1 id="descriptive-analysis-of-founders-online-dataset">Descriptive Analysis of Founders Online Dataset</h1>
+<h2 id="overview_1">Overview</h2>
+<p>This document provides a detailed workflow for conducting a descriptive analysis of the Founders Online dataset. The analysis focuses on understanding the corpus of letters, including author and recipient interactions, document counts, and temporal patterns.</p>
+<h2 id="workflow_1">Workflow</h2>
+<h3 id="1-load-libraries_1">1. Load Libraries</h3>
+<p>Begin by loading the necessary library:</p>
+<ul>
+<li><strong><code>tidyverse</code></strong>: For data manipulation and visualization.</li>
+</ul>
+<h3 id="2-read-data">2. Read Data</h3>
+<ul>
+<li>Import the preprocessed datasets using <code>readRDS</code>:</li>
+<li><code>ffc5</code>: Contains the primary dataset for analysis.</li>
+<li><code>ffc6</code>: Contains additional data, possibly including more comprehensive records or extended periods.</li>
+</ul>
+<h3 id="3-descriptive-analysis">3. Descriptive Analysis</h3>
+<h4 id="background-information">Background Information</h4>
+<ul>
+<li>Create a reference table (<code>Period_table</code>) outlining the periods of interest, including:</li>
+<li>Period names (e.g., Colonial, Revolutionary War).</li>
+<li>General date ranges and specific start and end dates for each period.</li>
+</ul>
+<h4 id="unique-authors-and-recipients">Unique Authors and Recipients</h4>
+<ul>
+<li>Calculate the number of unique authors and recipients in the <code>ffc5</code> dataset using <code>n_distinct</code>.</li>
+</ul>
+<h4 id="documents-and-word-counts-by-period">Documents and Word Counts by Period</h4>
+<ul>
+<li>Aggregate the number of documents and total word count by period using <code>data.table::setDT</code> and summarizing with <code>by_period</code>.</li>
+<li>Join the results with <code>Period_table</code> to enrich the data and format it for readability using <code>knitr::kable</code>.</li>
+</ul>
+<h4 id="temporal-analysis-of-writings">Temporal Analysis of Writings</h4>
+<ul>
+<li><strong>Frequency of Writings by Month</strong>:</li>
+<li>Filter and aggregate the number of documents written by notable founders each month.</li>
+<li>
+<p>Plot the monthly frequency of writings, highlighting periods using vertical lines and faceting by author.</p>
+</li>
+<li>
+<p><strong>Frequency of Received Writings by Month</strong>:</p>
+</li>
+<li>Similarly, analyze and plot the frequency of received documents by founders over time.</li>
+<li>Adjust the visual details to highlight periods and facet by recipient.</li>
+</ul>
+<h4 id="interaction-between-founders">Interaction Between Founders</h4>
+<ul>
+<li><strong>Number of Messages Sent</strong>:</li>
+<li>
+<p>Summarize and visualize the number of messages sent by each founder.</p>
+</li>
+<li>
+<p><strong>Number of Messages Received</strong>:</p>
+</li>
+<li>Summarize and visualize the number of messages received by each founder.</li>
+</ul>
+<h3 id="4-save-plots-and-results">4. Save Plots and Results</h3>
+<ul>
+<li>Save the generated plots and summary results (implementation details to be added).</li>
+</ul>
+<h2 id="conclusion_1">Conclusion</h2>
+<p>This workflow provides a thorough descriptive analysis of the Founders Online dataset, focusing on document counts, author-recipient interactions, and temporal patterns. By following this process, you can gain valuable insights into the corpus of writings, track communication trends over time, and understand the volume and distribution of written exchanges among key historical figures.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../PREPARATION_FF/" class="btn btn-neutral float-left" title="Data preparation Founding Fathers"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../WORD2VEC/" class="btn btn-neutral float-right" title="Word2Vec models">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/h-gear/revolution" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../PREPARATION_FF/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../WORD2VEC/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

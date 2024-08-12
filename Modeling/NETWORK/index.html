@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://revolution.readthedocs.io/Modeling/NETWORK/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Network modeling - American revolution</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Network modeling";
+        var mkdocs_page_input_path = "Modeling\\NETWORK.md";
+        var mkdocs_page_url = "/Modeling/NETWORK/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> American revolution
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution">Source code</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution/issues">Issues</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Background of the project</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/BACKGROUND/">Hgear</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/METHODS/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/DATA/">Data</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Started/INSTALLATION/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Data preparation and EDA</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/COLLECTION/">Scraping Letters of Delegates to Congress</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/FFCOLLECTION/">Scraping Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/PREPARATION_DEL/">Data preparation Delegates of Congres</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/PREPARATION_FF/">Data preparation Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/EXPLORE/">Exploratory analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/WORD2VEC/">Word2Vec models</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Modeling</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../TOPICANALYSIS/">Semi-supervised topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../DYNTOPICANALYSIS/">Dynamic topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../SENTIMENT/">Sentiment analysis</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Network modeling</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#workflow-overview">Workflow Overview</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#step-by-step-guide">Step-by-Step Guide</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-libraries">1. Libraries</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-read-data">2. Read Data</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-create-edge-list">3. Create Edge List</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#4-create-node-list">4. Create Node List</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#5-aggregated-network">5. Aggregated Network</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#6-community-detection">6. Community Detection</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#7-dynamic-network-analysis">7. Dynamic Network Analysis</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#8-centrality-calculations">8. Centrality Calculations</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#9-animation">9. Animation</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#conclusion">Conclusion</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../MODELING/">Time-respecting path-based network analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../GEO/">Geo-spatial model</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developers</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT/">Code of Conduct</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING/">Contributing guidelines</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CITE/">How to Cite</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CONTACT/">Contact information</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/ACTION/">In action</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">American revolution</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Modeling</li>
+      <li class="breadcrumb-item active">Network modeling</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/h-gear/revolution/edit/master/docs/Modeling/NETWORK.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="network-analysis-and-community-detection">Network analysis and community detection</h1>
+<h2 id="workflow-overview">Workflow Overview</h2>
+<p>This document outlines the steps for performing network analysis, community detection, and calculating centralities using R. The analysis involves several key stages, including data preparation, network construction, community detection, dynamic network analysis, and centrality calculations.</p>
+<h2 id="step-by-step-guide">Step-by-Step Guide</h2>
+<h3 id="1-libraries">1. Libraries</h3>
+<p>Load the necessary R libraries for network analysis and visualization:
+- <strong><code>visNetwork</code></strong> for interactive network visualizations.
+- <strong><code>tidyverse</code></strong> for data manipulation and cleaning.
+- <strong><code>ndtv</code></strong> for dynamic network visualizations.
+- <strong><code>tsna</code></strong> for time series network analysis.
+- <strong><code>sna</code></strong> for network analysis metrics.
+- <strong><code>networkDynamic</code></strong> for handling dynamic networks.
+- <strong><code>igraph</code></strong> for community detection and additional network analysis.</p>
+<h3 id="2-read-data">2. Read Data</h3>
+<p>Import and prepare the data:
+- <strong>Letters Data</strong>: Load a CSV file containing information about letters and their associated topics.
+- <strong>Preprocessed Data</strong>: Load an RDS file containing preprocessed information about the letters. Ensure the data types are correctly set for subsequent analysis.</p>
+<h3 id="3-create-edge-list">3. Create Edge List</h3>
+<p>Generate an edge list for the network:
+- Filter and select relevant data based on a specific topic of interest.
+- Compute the weight of interactions (i.e., number of letters exchanged) between sender and receiver.
+- Prepare the edge list by adding attributes such as onset and terminus years, edge ID, and undirected weight (if applicable).</p>
+<h3 id="4-create-node-list">4. Create Node List</h3>
+<p>Construct a node list:
+- Identify unique nodes (authors and recipients) and their attributes.
+- Include distinguishing features like specific colors for prominent figures (e.g., founding fathers).</p>
+<h3 id="5-aggregated-network">5. Aggregated Network</h3>
+<p>Build and summarize the static network:
+- Create a network object using the edge list and node list.
+- Plot the network to visualize relationships, using attributes such as node color and edge width.</p>
+<h3 id="6-community-detection">6. Community Detection</h3>
+<p>Detect communities within the network:
+- Convert the network into an igraph object.
+- Apply the Louvain algorithm for community detection to identify clusters within the network.
+- Visualize the network with community-based color coding and node sizes proportional to centrality measures.</p>
+<h3 id="7-dynamic-network-analysis">7. Dynamic Network Analysis</h3>
+<p>Analyze the network dynamics over time:
+- Create a dynamic network object using edge and vertex spells.
+- Reconcile vertex activity with edge activity to ensure correct temporal alignment.
+- Visualize the network dynamics using timeline plots and network slices.</p>
+<h3 id="8-centrality-calculations">8. Centrality Calculations</h3>
+<p>Calculate and visualize centralities:
+- Analyze graph-level statistics such as density, reciprocity, and dyad census over time.
+- Compute and plot node-level centralities, including degree and other metrics.</p>
+<h3 id="9-animation">9. Animation</h3>
+<p>Create animations to visualize changes in the network over time:
+- Compute and render an animated version of the network to reveal structural patterns and transitions.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>This workflow provides a comprehensive approach to network analysis, from data preparation to dynamic analysis and visualization. By following these steps, users can gain insights into community structures, network dynamics, and centrality measures, allowing for a deeper understanding of the network's evolution and key actors.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../SENTIMENT/" class="btn btn-neutral float-left" title="Sentiment analysis"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../MODELING/" class="btn btn-neutral float-right" title="Time-respecting path-based network analysis">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/h-gear/revolution" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../SENTIMENT/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../MODELING/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

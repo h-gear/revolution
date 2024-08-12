@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://revolution.readthedocs.io/Analyses/WORD2VEC/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Word2Vec models - American revolution</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Word2Vec models";
+        var mkdocs_page_input_path = "Analyses\\WORD2VEC.md";
+        var mkdocs_page_url = "/Analyses/WORD2VEC/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> American revolution
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution">Source code</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution/issues">Issues</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Background of the project</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/BACKGROUND/">Hgear</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/METHODS/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/DATA/">Data</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Started/INSTALLATION/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Data preparation and EDA</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../COLLECTION/">Scraping Letters of Delegates to Congress</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../FFCOLLECTION/">Scraping Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../PREPARATION_DEL/">Data preparation Delegates of Congres</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../PREPARATION_FF/">Data preparation Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../EXPLORE/">Exploratory analysis</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Word2Vec models</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#1-libraries">1. Libraries</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#2-check-system-architecture">2. Check System Architecture</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#3-functions">3. Functions</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#get_contentargs">get_content(args)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#split_into_sentencestext">split_into_sentences(text)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#split_into_wordstext">split_into_words(text)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#remove_stopwords_and_punctuationtext-stopwords">remove_stopwords_and_punctuation(text, stopwords)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#join_wordstext">join_words(text)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#tokenizeargs">tokenize(args)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#get_min_max_year">get_min_max_year()</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#get_sentences_for_yearyear">get_sentences_for_year(year)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#get_sentences_in_rangestart_y-end_y">get_sentences_in_range(start_y, end_y)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#trainargs">train(args)</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#4-main-function">4. Main Function</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#conclusion">Conclusion</a>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Modeling</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/TOPICANALYSIS/">Semi-supervised topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/DYNTOPICANALYSIS/">Dynamic topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/SENTIMENT/">Sentiment analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/NETWORK/">Network modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/MODELING/">Time-respecting path-based network analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/GEO/">Geo-spatial model</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developers</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT/">Code of Conduct</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING/">Contributing guidelines</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CITE/">How to Cite</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CONTACT/">Contact information</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/ACTION/">In action</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">American revolution</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Data preparation and EDA</li>
+      <li class="breadcrumb-item active">Word2Vec models</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/h-gear/revolution/edit/master/docs/Analyses/WORD2VEC.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="text-processing-and-word2vec-model-training">Text processing and word2vec model training</h1>
+<h2 id="overview">Overview</h2>
+<p>This script performs various text processing tasks on a dataset of letters of the Delegates of Congres, including:</p>
+<ul>
+<li>Extracting letter content from raw files.</li>
+<li>Tokenizing and cleaning text data.</li>
+<li>Training Word2Vec models on the processed text.</li>
+</ul>
+<h2 id="1-libraries">1. Libraries</h2>
+<p>The script requires several libraries for its operations:</p>
+<ul>
+<li><strong><code>argparse</code></strong>: For command-line argument parsing.</li>
+<li><strong><code>pandas</code></strong>: For data manipulation and reading CSV files.</li>
+<li><strong><code>tqdm</code></strong>: For progress bars.</li>
+<li><strong><code>numpy</code></strong>: For numerical operations.</li>
+<li><strong><code>nltk</code></strong>: For natural language processing (tokenization and stopword removal).</li>
+<li><strong><code>string</code></strong>: For string operations.</li>
+<li><strong><code>gensim</code></strong>: For topic modeling and Word2Vec model training.</li>
+<li><strong><code>os</code></strong>: For file and directory operations.</li>
+<li><strong><code>csv</code></strong>: For CSV file operations.</li>
+</ul>
+<h2 id="2-check-system-architecture">2. Check System Architecture</h2>
+<p>The script adjusts the CSV field size limit based on whether the system is 32-bit or 64-bit.</p>
+<h2 id="3-functions">3. Functions</h2>
+<h3 id="get_contentargs"><code>get_content(args)</code></h3>
+<p><strong>Purpose</strong>: Extracts the content of letters from text files and saves them into CSV files by year.</p>
+<ul>
+<li><strong>Parameters</strong>: <code>args</code> (command-line arguments, though not used in the function).</li>
+<li><strong>Process</strong>:</li>
+<li>Reads metadata from <code>Letters.csv</code>.</li>
+<li>Retrieves the content from text files based on the 'TCP' field.</li>
+<li>Saves each year's content to a separate CSV file.</li>
+</ul>
+<h3 id="split_into_sentencestext"><code>split_into_sentences(text)</code></h3>
+<p><strong>Purpose</strong>: Splits text into sentences.</p>
+<ul>
+<li><strong>Parameters</strong>: <code>text</code> (string).</li>
+<li><strong>Returns</strong>: List of sentences.</li>
+</ul>
+<h3 id="split_into_wordstext"><code>split_into_words(text)</code></h3>
+<p><strong>Purpose</strong>: Tokenizes sentences into words.</p>
+<ul>
+<li><strong>Parameters</strong>: <code>text</code> (list of sentences).</li>
+<li><strong>Returns</strong>: List of lists of words.</li>
+</ul>
+<h3 id="remove_stopwords_and_punctuationtext-stopwords"><code>remove_stopwords_and_punctuation(text, stopwords)</code></h3>
+<p><strong>Purpose</strong>: Removes stopwords and punctuation from tokenized text.</p>
+<ul>
+<li><strong>Parameters</strong>: </li>
+<li><code>text</code> (list of lists of words).</li>
+<li><code>stopwords</code> (list of stopwords).</li>
+<li><strong>Returns</strong>: Cleaned list of lists of words.</li>
+</ul>
+<h3 id="join_wordstext"><code>join_words(text)</code></h3>
+<p><strong>Purpose</strong>: Joins lists of words into a single string document.</p>
+<ul>
+<li><strong>Parameters</strong>: <code>text</code> (list of lists of words).</li>
+<li><strong>Returns</strong>: String document.</li>
+</ul>
+<h3 id="tokenizeargs"><code>tokenize(args)</code></h3>
+<p><strong>Purpose</strong>: Processes raw text files into tokenized and cleaned text, and saves them in CSV files.</p>
+<ul>
+<li><strong>Parameters</strong>: <code>args</code> (command-line arguments, though not used in the function).</li>
+<li><strong>Process</strong>:</li>
+<li>Reads text content from CSV files.</li>
+<li>Tokenizes, removes stopwords, and joins words.</li>
+<li>Saves the processed text to new CSV files.</li>
+</ul>
+<h3 id="get_min_max_year"><code>get_min_max_year()</code></h3>
+<p><strong>Purpose</strong>: Retrieves the minimum and maximum year from tokenized data.</p>
+<ul>
+<li><strong>Returns</strong>: Tuple of (min_year, max_year).</li>
+</ul>
+<h3 id="get_sentences_for_yearyear"><code>get_sentences_for_year(year)</code></h3>
+<p><strong>Purpose</strong>: Retrieves tokenized sentences from a CSV file for a specific year.</p>
+<ul>
+<li><strong>Parameters</strong>: <code>year</code> (int).</li>
+<li><strong>Returns</strong>: List of lists of sentences.</li>
+</ul>
+<h3 id="get_sentences_in_rangestart_y-end_y"><code>get_sentences_in_range(start_y, end_y)</code></h3>
+<p><strong>Purpose</strong>: Retrieves tokenized sentences for a range of years.</p>
+<ul>
+<li><strong>Parameters</strong>:</li>
+<li><code>start_y</code> (int): Start year.</li>
+<li><code>end_y</code> (int): End year.</li>
+<li><strong>Returns</strong>: List of lists of sentences.</li>
+</ul>
+<h3 id="trainargs"><code>train(args)</code></h3>
+<p><strong>Purpose</strong>: Trains Word2Vec models on text data from specified year ranges.</p>
+<ul>
+<li><strong>Parameters</strong>: <code>args</code> (command-line arguments, includes optional window size for model training).</li>
+<li><strong>Process</strong>:</li>
+<li>Constructs and trains a Word2Vec model for each year range.</li>
+<li>Saves the trained model to disk.</li>
+</ul>
+<h2 id="4-main-function">4. Main Function</h2>
+<p><strong>Purpose</strong>: Parses command-line arguments and executes the corresponding function (<code>get_content</code>, <code>tokenize</code>, or <code>train</code>).</p>
+<ul>
+<li><strong>Command-line Arguments</strong>:</li>
+<li><code>content</code>: Extracts content from raw data.</li>
+<li><code>tokenize</code>: Tokenizes and cleans text data.</li>
+<li><code>train</code>: Trains Word2Vec models, with an optional window size argument.</li>
+</ul>
+<h2 id="conclusion">Conclusion</h2>
+<p>This script provides a comprehensive solution for processing and analyzing historical letter data. It extracts and tokenizes text content, prepares it for modeling, and trains Word2Vec models to capture semantic relationships between words.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../EXPLORE/" class="btn btn-neutral float-left" title="Exploratory analysis"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../Modeling/INTRODUCTION/" class="btn btn-neutral float-right" title="Introduction">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/h-gear/revolution" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../EXPLORE/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../Modeling/INTRODUCTION/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

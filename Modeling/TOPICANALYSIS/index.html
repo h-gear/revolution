@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://revolution.readthedocs.io/Modeling/TOPICANALYSIS/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Semi-supervised topic modeling - American revolution</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Semi-supervised topic modeling";
+        var mkdocs_page_input_path = "Modeling\\TOPICANALYSIS.md";
+        var mkdocs_page_url = "/Modeling/TOPICANALYSIS/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> American revolution
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution">Source code</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution/issues">Issues</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Background of the project</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/BACKGROUND/">Hgear</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/METHODS/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/DATA/">Data</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Started/INSTALLATION/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Data preparation and EDA</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/COLLECTION/">Scraping Letters of Delegates to Congress</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/FFCOLLECTION/">Scraping Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/PREPARATION_DEL/">Data preparation Delegates of Congres</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/PREPARATION_FF/">Data preparation Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/EXPLORE/">Exploratory analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/WORD2VEC/">Word2Vec models</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Modeling</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Semi-supervised topic modeling</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#description">Description</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#purpose">Purpose</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#input-dataset">Input Dataset</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#output">Output</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#workflow">Workflow</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#conclusion">Conclusion</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../DYNTOPICANALYSIS/">Dynamic topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../SENTIMENT/">Sentiment analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../NETWORK/">Network modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../MODELING/">Time-respecting path-based network analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../GEO/">Geo-spatial model</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developers</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT/">Code of Conduct</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING/">Contributing guidelines</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CITE/">How to Cite</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CONTACT/">Contact information</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/ACTION/">In action</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">American revolution</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Modeling</li>
+      <li class="breadcrumb-item active">Semi-supervised topic modeling</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/h-gear/revolution/edit/master/docs/Modeling/TOPICANALYSIS.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="semi-supervised-topic-modeling">Semi-supervised topic modeling</h1>
+<h2 id="description">Description</h2>
+<p>This script performs a comprehensive topic analysis on the Founders Online texts. It categorizes letters based on their dominant topics, creating a framework to analyze subsets of letters according to specific themes. This method complements the results from the Shico tool, which selects homogeneous letters based on word occurrences related to particular concepts. The combined approach of topic analysis and Shico's results provides a robust method to validate findings and refine topic-based subsets. Ultimately, this processed data supports the creation of animated word clouds and network analyses for deeper insights into the topics of interest.</p>
+<h2 id="purpose">Purpose</h2>
+<ul>
+<li><strong>Assess Topic Diversity:</strong> To understand the range of topics present in the letters.</li>
+<li><strong>Create Homogeneous Subsets:</strong> To generate subsets of letters categorized by different political ideologies as identified by the lead applicant.</li>
+<li><strong>Validate Shico Results:</strong> To cross-check the results from Shico with the topic analysis to ensure consistency and accuracy.</li>
+<li><strong>Generate Input for Visualization:</strong> To prepare datasets suitable for creating animated word clouds, enhancing topic visualization.</li>
+</ul>
+<h2 id="input-dataset">Input Dataset</h2>
+<ul>
+<li><strong>Letters:</strong> The preprocessed dataset from Founders Online, including letter IDs and text.</li>
+</ul>
+<h2 id="output">Output</h2>
+<ul>
+<li><strong>Data Frame:</strong> A data frame that includes an additional column indicating the dominant topic for each letter and topic probabilities for all topics.</li>
+</ul>
+<h2 id="workflow">Workflow</h2>
+<ol>
+<li>
+<p><strong>Import Libraries</strong>
+   Begin by loading the necessary libraries for text processing and topic modeling. This includes tools for parallel computation and specialized packages such as <code>quanteda</code>, <code>seededlda</code>, and <code>furrr</code>.</p>
+</li>
+<li>
+<p><strong>Read and Prepare Data</strong>
+   Load the preprocessed dataset of letters. Ensure the letters are sorted by sending date, and verify that each letter is correctly formatted for subsequent analysis.</p>
+</li>
+<li>
+<p><strong>Text Preprocessing</strong></p>
+</li>
+<li><strong>Part-of-Speech Tagging:</strong> Segment the text into chunks and extract nouns. This process may be divided into multiple files to handle large datasets efficiently.</li>
+<li><strong>Tokenization:</strong> Convert text to lowercase, remove abbreviations and stopwords, and create tokens. Identify and integrate multi-word expressions into tokens.</li>
+<li>
+<p><strong>Lemmatization:</strong> Use a predefined lemma table to reduce words to their base forms, ensuring consistency in the text analysis.</p>
+</li>
+<li>
+<p><strong>Combine and Clean Data</strong>
+   Combine the original and cleaned versions of the letters. Create a document-feature matrix (DFM) from the lemmatized tokens, and refine it by removing infrequent and overly common terms.</p>
+</li>
+<li>
+<p><strong>Topic Modeling</strong></p>
+</li>
+<li><strong>Initial Topic Count:</strong> Experiment with different numbers of topics using measures like Kullback-Leibler divergence to find the optimal count.</li>
+<li>
+<p><strong>Model Testing:</strong> Utilize the <code>seededlda</code> approach to guide topic formation with specific keywords. Test multiple models with varying numbers of topics to identify the most meaningful configuration.</p>
+</li>
+<li>
+<p><strong>Evaluate Models</strong>
+   Assess the candidate models for coherence and exclusivity. These evaluations help determine the quality and distinctiveness of the topics, guiding the selection of the most representative models.</p>
+</li>
+<li>
+<p><strong>Save Results</strong>
+   Save the processed data and model results in RDS format for future use. This includes the final document-feature matrix, topic models, and any intermediate outputs.</p>
+</li>
+<li>
+<p><strong>Topic Probabilities per Letter</strong>
+   Calculate the topic probabilities for each letter. This involves extracting the topic probabilities from the model results and transforming them into a format suitable for further analysis.</p>
+</li>
+<li>
+<p><strong>Most-likely Topic for Each Letter</strong>
+   Determine the dominant topic for each letter based on the highest probability and add this information to the original texts dataframe. This allows for more focused analyses and visualizations.</p>
+</li>
+<li>
+<p><strong>Distribution and Visualization</strong></p>
+<ul>
+<li><strong>Distribution of Letters per Main Topic:</strong> Analyze and visualize the distribution of letters across different topics. Generate a bar plot to show the proportion of letters associated with each topic.</li>
+<li><strong>Most Prevalent Topics:</strong> Identify and visualize the most prevalent topics overall. Create a horizontal bar plot to display the prevalence of each topic.</li>
+<li><strong>Topic Prevalence by Year:</strong> Examine how topic prevalence changes over time. Calculate the mean topic prevalence by year and visualize temporal trends in topic distribution.</li>
+</ul>
+</li>
+<li>
+<p><strong>Visualize Word Probabilities per Topic</strong>
+    Visualize the top words associated with each topic. Plot the top terms for each topic to understand the key themes and their significance.</p>
+</li>
+<li>
+<p><strong>LDAvis</strong>
+    Utilize LDAvis for interactive visualization of the LDA topic model. This tool helps in exploring topic-term relationships and provides a graphical representation of the topics and their associated terms.</p>
+</li>
+<li>
+<p><strong>Save Data for Further Analysis</strong>
+    Prepare and save dataframes for additional analyses, such as animated word clouds and network analyses. This includes merging topic probabilities with text data and creating datasets for detailed exploration.</p>
+</li>
+</ol>
+<h2 id="conclusion">Conclusion</h2>
+<p>This workflow efficiently manages large text datasets by integrating text preprocessing, topic modeling, and validation techniques. The combination of topic analysis with Shico's results offers robust insights into letter themes and supports further exploration through visualizations such as animated word clouds and network analyses. This comprehensive approach facilitates a deeper understanding of the political ideologies and themes in historical letters, aiding both qualitative and quantitative research.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../INTRODUCTION/" class="btn btn-neutral float-left" title="Introduction"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../DYNTOPICANALYSIS/" class="btn btn-neutral float-right" title="Dynamic topic modeling">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/h-gear/revolution" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../INTRODUCTION/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../DYNTOPICANALYSIS/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

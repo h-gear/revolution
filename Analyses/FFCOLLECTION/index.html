@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://revolution.readthedocs.io/Analyses/FFCOLLECTION/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Scraping Founding Fathers - American revolution</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Scraping Founding Fathers";
+        var mkdocs_page_input_path = "Analyses\\FFCOLLECTION.md";
+        var mkdocs_page_url = "/Analyses/FFCOLLECTION/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> American revolution
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution">Source code</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution/issues">Issues</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Background of the project</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/BACKGROUND/">Hgear</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/METHODS/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/DATA/">Data</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Started/INSTALLATION/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Data preparation and EDA</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../COLLECTION/">Scraping Letters of Delegates to Congress</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Scraping Founding Fathers</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#objective">Objective</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#workflow">Workflow</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#step-by-step-guide">Step-by-Step Guide</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-load-required-libraries">1. Load Required Libraries</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#2-scrape-data">2. Scrape Data</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#extract-metadata">Extract Metadata</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#extract-text-content">Extract Text Content</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#categorize-texts-by-historical-period">Categorize Texts by Historical Period</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#3-save-data">3. Save Data</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#conclusion">Conclusion</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../PREPARATION_DEL/">Data preparation Delegates of Congres</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../PREPARATION_FF/">Data preparation Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../EXPLORE/">Exploratory analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../WORD2VEC/">Word2Vec models</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Modeling</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/TOPICANALYSIS/">Semi-supervised topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/DYNTOPICANALYSIS/">Dynamic topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/SENTIMENT/">Sentiment analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/NETWORK/">Network modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/MODELING/">Time-respecting path-based network analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/GEO/">Geo-spatial model</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developers</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT/">Code of Conduct</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING/">Contributing guidelines</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CITE/">How to Cite</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CONTACT/">Contact information</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/ACTION/">In action</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">American revolution</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Data preparation and EDA</li>
+      <li class="breadcrumb-item active">Scraping Founding Fathers</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/h-gear/revolution/edit/master/docs/Analyses/FFCOLLECTION.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="founding-fathers-letters-data-scraping">Founding Fathers Letters: Data scraping</h1>
+<p>This documentation outlines the process for scraping, cleaning, and saving data from the "Founding Fathers" website, available at <a href="https://founders.archives.gov/">https://founders.archives.gov/</a>. This dataset is utilized for historical research and analysis. The modified code provided by Jay Timm, which can be found <a href="https://github.com/jaytimm/founders-online-corpus">here</a>, has been adapted for this purpose.</p>
+<h2 id="overview">Overview</h2>
+<h3 id="objective">Objective</h3>
+<p>The goal is to scrape and save text data from the "Founding Fathers" website, extracting metadata and content from XML and JSON sources. The data will be cleaned and organized into a structured format suitable for further analysis.</p>
+<h3 id="workflow">Workflow</h3>
+<ol>
+<li><strong>Load Required Libraries</strong>: Import the necessary R packages for data manipulation and scraping.</li>
+<li><strong>Scrape Data</strong>: Extract metadata and text content from XML and JSON files.</li>
+<li><strong>Save Data</strong>: Organize and save the cleaned data into files categorized by historical periods.</li>
+</ol>
+<h2 id="step-by-step-guide">Step-by-Step Guide</h2>
+<h3 id="1-load-required-libraries">1. Load Required Libraries</h3>
+<p>First, load the <code>tidyverse</code> library, which includes essential tools for data manipulation and scraping. This library facilitates various data wrangling tasks.</p>
+<pre><code class="language-r">library(tidyverse)
+</code></pre>
+<p>Set the working directory to where your XML metadata file is located and specify the file name.</p>
+<h2 id="2-scrape-data">2. Scrape Data</h2>
+<h3 id="extract-metadata">Extract Metadata</h3>
+<p>To obtain metadata for each letter, read the XML file using the <code>xml2::read_xml()</code> function. This function parses the XML file, allowing you to extract key metadata fields such as title, permalink, project, authors, recipients, and dates. These fields are then compiled into a data frame.</p>
+<ul>
+<li><strong>Variable</strong>: <code>xml2</code></li>
+<li><strong>Function</strong>: <code>xml2::as_list()</code></li>
+</ul>
+<h3 id="extract-text-content">Extract Text Content</h3>
+<p>The full-text content of each letter is retrieved through the provided API. Use the <code>jsonlite::fromJSON()</code> function to parse the JSON responses from the API. A custom function, <code>clean_text()</code>, is applied to process the raw text, removing unnecessary whitespace and empty lines.</p>
+<ul>
+<li><strong>Variable</strong>: <code>x2$api</code></li>
+<li><strong>Function</strong>: <code>jsonlite::fromJSON()</code></li>
+<li><strong>Function</strong>: <code>clean_text()</code></li>
+</ul>
+<h3 id="categorize-texts-by-historical-period">Categorize Texts by Historical Period</h3>
+<p>Assign each letter to a historical period based on its date using the <code>mutate()</code> function along with the <code>case_when()</code> helper from the <code>dplyr</code> package. Historical periods include Colonial, Revolutionary War, Confederation Period, and various presidencies.</p>
+<ul>
+<li><strong>Function</strong>: <code>mutate()</code></li>
+<li><strong>Function</strong>: <code>case_when()</code></li>
+</ul>
+<h2 id="3-save-data">3. Save Data</h2>
+<p>The cleaned and categorized data is saved into separate RDS files, one for each historical period. Use the <code>saveRDS()</code> function to serialize the data frames into RDS files, which are suitable for storage and further analysis.</p>
+<ul>
+<li><strong>Function</strong>: <code>saveRDS()</code></li>
+</ul>
+<p>Set the working directory to the desired location for saving files. Utilize <code>lapply()</code> to iterate through each period’s data and save it as individual RDS files.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>By following these steps, you can efficiently scrape, clean, and save text data from the "Founding Fathers" website. This process ensures that the data is well-organized and ready for further historical analysis.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../COLLECTION/" class="btn btn-neutral float-left" title="Scraping Letters of Delegates to Congress"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../PREPARATION_DEL/" class="btn btn-neutral float-right" title="Data preparation Delegates of Congres">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/h-gear/revolution" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../COLLECTION/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../PREPARATION_DEL/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

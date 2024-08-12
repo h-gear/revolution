@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://revolution.readthedocs.io/Modeling/SENTIMENT/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Sentiment analysis - American revolution</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Sentiment analysis";
+        var mkdocs_page_input_path = "Modeling\\SENTIMENT.md";
+        var mkdocs_page_url = "/Modeling/SENTIMENT/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> American revolution
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution">Source code</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution/issues">Issues</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Background of the project</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/BACKGROUND/">Hgear</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/METHODS/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/DATA/">Data</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Started/INSTALLATION/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Data preparation and EDA</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/COLLECTION/">Scraping Letters of Delegates to Congress</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/FFCOLLECTION/">Scraping Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/PREPARATION_DEL/">Data preparation Delegates of Congres</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/PREPARATION_FF/">Data preparation Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/EXPLORE/">Exploratory analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/WORD2VEC/">Word2Vec models</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Modeling</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../TOPICANALYSIS/">Semi-supervised topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../DYNTOPICANALYSIS/">Dynamic topic modeling</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Sentiment analysis</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#description">Description</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#purpose">Purpose</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#input-dataset">Input Dataset</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#output">Output</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#workflow">Workflow</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#conclusion">Conclusion</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../NETWORK/">Network modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../MODELING/">Time-respecting path-based network analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../GEO/">Geo-spatial model</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developers</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT/">Code of Conduct</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING/">Contributing guidelines</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CITE/">How to Cite</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CONTACT/">Contact information</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/ACTION/">In action</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">American revolution</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Modeling</li>
+      <li class="breadcrumb-item active">Sentiment analysis</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/h-gear/revolution/edit/master/docs/Modeling/SENTIMENT.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="sentiment-analysis-by-topic-per-year">Sentiment analysis by topic per year</h1>
+<h2 id="description">Description</h2>
+<p>This script performs sentiment analysis on historical texts, categorized by topic and year. It evaluates the sentiment associated with each topic over time and visualizes sentiment trends through various plots. By integrating historical events and topic analysis results, the script provides insights into how sentiment evolves within specific topics across different periods. This analysis supports a deeper understanding of the thematic shifts and emotional tone in historical letters.</p>
+<h2 id="purpose">Purpose</h2>
+<ul>
+<li><strong>Analyze Sentiment by Topic:</strong> To assess the sentiment associated with different topics over time.</li>
+<li><strong>Visualize Sentiment Trends:</strong> To create visual representations of sentiment changes, including ridge plots and time series.</li>
+<li><strong>Compare Sentiments:</strong> To generate word clouds contrasting positive and negative sentiments for additional insights.</li>
+</ul>
+<h2 id="input-dataset">Input Dataset</h2>
+<ul>
+<li><strong>Historical Events:</strong> A CSV file containing significant historical events with start and end dates.</li>
+<li><strong>Topic-Analytical Results:</strong> A CSV file with preprocessed texts including topic information and clean text.</li>
+</ul>
+<h2 id="output">Output</h2>
+<ul>
+<li><strong>Figures:</strong> TIFF files containing visualizations of sentiment trends, including sentiment over time for specific topics, overall topic sentiment trends, and word clouds.</li>
+</ul>
+<h2 id="workflow">Workflow</h2>
+<ol>
+<li>
+<p><strong>Import Libraries</strong>
+   Load necessary R libraries for text processing, sentiment analysis, and visualization. This includes packages like <code>sentopics</code>, <code>tidytext</code>, <code>ggridges</code>, <code>tidyverse</code>, <code>reshape2</code>, <code>wordcloud</code>, <code>zoo</code>, and <code>lubridate</code>.</p>
+</li>
+<li>
+<p><strong>Read Data</strong></p>
+</li>
+<li><strong>Historical Events:</strong> Load historical events data and parse dates.</li>
+<li>
+<p><strong>Topic-Analytical Results:</strong> Load text data with topic information and preprocess dates for analysis.</p>
+</li>
+<li>
+<p><strong>Prepare Data</strong></p>
+</li>
+<li><strong>Text Data:</strong> Ensure each word is in a separate row and format the dataset for sentiment analysis by year and topic.</li>
+<li>
+<p><strong>Historical Time Periods:</strong> Define key historical periods with start and end dates for contextual analysis.</p>
+</li>
+<li>
+<p><strong>Calculate Sentiment Per Topic Per Year</strong></p>
+</li>
+<li>
+<p><strong>Sentiment Analysis:</strong> Join text data with sentiment lexicons (AFINN) to calculate average sentiment scores by topic and year.</p>
+</li>
+<li>
+<p><strong>Visualize Sentiment for Individual Topics</strong></p>
+</li>
+<li>
+<p><strong>Plot Sentiment for Specific Topics:</strong> Generate and save TIFF files showing sentiment trends over time for specific topics, e.g., "Republican politics" and "Liberal politics."</p>
+</li>
+<li>
+<p><strong>Visualize Sentiment Development for All Topics</strong></p>
+</li>
+<li>
+<p><strong>Ridge Graph:</strong> Create a ridge plot displaying sentiment development across all topics over time. Use a dynamic color palette to represent different topics.</p>
+</li>
+<li>
+<p><strong>Generate Word Clouds</strong></p>
+</li>
+<li>
+<p><strong>Positive vs. Negative Sentiments:</strong> Create word clouds to visualize the most frequent words associated with positive and negative sentiments, providing insights into the emotional tone of the texts.</p>
+</li>
+<li>
+<p><strong>Save Results</strong>
+   Save the generated plots and word clouds as TIFF files for further analysis and reporting.</p>
+</li>
+</ol>
+<h2 id="conclusion">Conclusion</h2>
+<p>This workflow provides a detailed sentiment analysis of historical texts, categorized by topic and year. By leveraging various visualizations, including time series plots, ridge graphs, and word clouds, the analysis offers a comprehensive view of how sentiment evolves within different themes over time. This approach enhances the understanding of historical texts, revealing shifts in emotional tone and thematic focus, and supports both qualitative and quantitative research efforts.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../DYNTOPICANALYSIS/" class="btn btn-neutral float-left" title="Dynamic topic modeling"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../NETWORK/" class="btn btn-neutral float-right" title="Network modeling">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/h-gear/revolution" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../DYNTOPICANALYSIS/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../NETWORK/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="css/theme.css" />
     <link rel="stylesheet" href="css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="assets/_mkdocstrings.css" rel="stylesheet" />
     
       <script>
         // Current page data
@@ -42,28 +43,80 @@
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="#">Home</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#commands">Commands</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#project-layout">Project layout</a>
-    </li>
     </ul>
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="" href="CONTRIBUTING.md">Contributing</a>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution">Source code</a>
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="" href="CODE_OF_CONDUCT.md">Code of Conduct</a>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution/issues">Issues</a>
                 </li>
               </ul>
+              <p class="caption"><span class="caption-text">Background of the project</span></p>
               <ul>
-                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution">🔗 Source code</a>
-                </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Background/BACKGROUND/">Hgear</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Background/METHODS/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Background/DATA/">Data</a>
+                  </li>
               </ul>
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
               <ul>
-                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution/issues">🔗 Issues</a>
-                </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Started/INSTALLATION/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Data preparation and EDA</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="Analyses/INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Analyses/COLLECTION/">Scraping Letters of Delegates to Congress</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Analyses/FFCOLLECTION/">Scraping Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Analyses/PREPARATION_DEL/">Data preparation Delegates of Congres</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Analyses/PREPARATION_FF/">Data preparation Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Analyses/EXPLORE/">Exploratory analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Analyses/WORD2VEC/">Word2Vec models</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Modeling</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="Modeling/INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Modeling/TOPICANALYSIS/">Semi-supervised topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Modeling/DYNTOPICANALYSIS/">Dynamic topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Modeling/SENTIMENT/">Sentiment analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Modeling/NETWORK/">Network modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Modeling/MODELING/">Time-respecting path-based network analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="Modeling/GEO/">Geo-spatial model</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developers</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="CODE_OF_CONDUCT/">Code of Conduct</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING/">Contributing guidelines</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="About/CITE/">How to Cite</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="About/CONTACT/">Contact information</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="About/ACTION/">In action</a>
+                  </li>
               </ul>
       </div>
     </div>
@@ -89,24 +142,19 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="welcome-to-mkdocs">Welcome to MkDocs</h1>
-<p>For full documentation visit <a href="https://www.mkdocs.org">mkdocs.org</a>.</p>
-<h2 id="commands">Commands</h2>
-<ul>
-<li><code>mkdocs new [dir-name]</code> - Create a new project.</li>
-<li><code>mkdocs serve</code> - Start the live-reloading docs server.</li>
-<li><code>mkdocs build</code> - Build the documentation site.</li>
-<li><code>mkdocs -h</code> - Print help message and exit.</li>
-</ul>
-<h2 id="project-layout">Project layout</h2>
-<pre><code>mkdocs.yml    # The configuration file.
-docs/
-    index.md  # The documentation homepage.
-    ...       # Other markdown pages, images and other files.
-</code></pre>
+                <h1 id="historiographing-the-era-of-the-american-revolution-hgear">Historiographing the Era of the American Revolution (HGEAR)</h1>
+<p><img alt="Rev" src="../logo.jpg" /></p>
+<p>The historical concept of <em>democracy</em>, <em>liberty</em> and <em>freedom</em> and its development through time is important to our understanding of the past. The goal of the HGEAR project is to chart shifts in the character and structure of political discourse during the era of the American Revolution. By comparing shifts in language usage (via <a href="https://github.com/h-gear/ShiCo/"><strong>ShiCo</strong></a> <em>(Shifting Concepts Through Time</em>) with changing formations in 
+correspondence networks, we are able to measure how networks of communication within the <a href="https://founders.archives.gov/"><strong>Founders Online</strong></a> corpus and other resources such as the <a href="https://memory.loc.gov/ammem/amlaw/lwdg.html"><strong>Letters of Delegates to Congress</strong></a> shaped the character, distribution, and spread of political ideas during the Revolutionary era. </p>
+<p>This project and associated analyses offer insights into longstanding debates in the field of early American history. Also, by means of additional collected data, we show how the 
+here included scripts and analyses can be easily accomodated to include other letter
+correspondence sources as well. Ultimately, this allows researchers to get a more complete picture of the fluxes in the political discourse during the American Revolution.</p>
               
             </div>
           </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="Background/BACKGROUND/" class="btn btn-neutral float-right" title="Hgear">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
 
   <hr/>
 
@@ -133,6 +181,8 @@ docs/
     
     
     
+      <span><a href="Background/BACKGROUND/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
   </span>
 </div>
     <script src="js/jquery-3.6.0.min.js"></script>
@@ -153,5 +203,5 @@ docs/
 
 <!--
 MkDocs version : 1.6.0
-Build Date UTC : 2024-08-08 08:26:28.816148+00:00
+Build Date UTC : 2024-08-12 13:09:12.919489+00:00
 -->

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://revolution.readthedocs.io/Modeling/DYNTOPICANALYSIS/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Dynamic topic modeling - American revolution</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Dynamic topic modeling";
+        var mkdocs_page_input_path = "Modeling\\DYNTOPICANALYSIS.md";
+        var mkdocs_page_url = "/Modeling/DYNTOPICANALYSIS/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> American revolution
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution">Source code</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution/issues">Issues</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Background of the project</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/BACKGROUND/">Hgear</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/METHODS/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/DATA/">Data</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Started/INSTALLATION/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Data preparation and EDA</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/COLLECTION/">Scraping Letters of Delegates to Congress</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/FFCOLLECTION/">Scraping Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/PREPARATION_DEL/">Data preparation Delegates of Congres</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/PREPARATION_FF/">Data preparation Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/EXPLORE/">Exploratory analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/WORD2VEC/">Word2Vec models</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Modeling</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../TOPICANALYSIS/">Semi-supervised topic modeling</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Dynamic topic modeling</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#workflow-overview">Workflow Overview</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#step-by-step-guide">Step-by-Step Guide</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-script-header">1. Script Header</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-libraries">2. Libraries</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-data">3. Data</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#4-create-keyatm-docs">4. Create keyATM Docs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#5-keywords">5. Keywords</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#6-create-decade-time-index-variable">6. Create Decade Time Index Variable</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#7-dynamic-keyatm">7. Dynamic keyATM</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#8-model-evaluation">8. Model Evaluation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#9-theta-document-topic-distribution">9. Theta (Document-Topic Distribution)</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#conclusion">Conclusion</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../SENTIMENT/">Sentiment analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../NETWORK/">Network modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../MODELING/">Time-respecting path-based network analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../GEO/">Geo-spatial model</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developers</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT/">Code of Conduct</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING/">Contributing guidelines</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CITE/">How to Cite</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CONTACT/">Contact information</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/ACTION/">In action</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">American revolution</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Modeling</li>
+      <li class="breadcrumb-item active">Dynamic topic modeling</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/h-gear/revolution/edit/master/docs/Modeling/DYNTOPICANALYSIS.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="dynamic-topic-modeling">Dynamic topic modeling</h1>
+<h2 id="workflow-overview">Workflow Overview</h2>
+<p>This document describes the process for performing dynamic topic analysis on the Founders Online texts using the <code>keyATM</code> package in R. The analysis focuses on understanding how the prevalence of topics evolves over time. The workflow involves loading necessary libraries, preparing data, creating a dynamic topic model, and evaluating the results.</p>
+<h2 id="step-by-step-guide">Step-by-Step Guide</h2>
+<h3 id="1-script-header">1. Script Header</h3>
+<p><strong>Description:</strong>
+This script performs a dynamic topic analysis on the Founders Online texts, analyzing how the prevalence of topics changes over time. It uses the <code>keyATM</code> package to fit a dynamic keyATM model to the cleaned text data.</p>
+<p><strong>Purpose:</strong>
+- Understand the evolution of topics over time.
+- Provide an alternative to the shifting concepts in time (shico) approach.</p>
+<p><strong>References:</strong>
+- <a href="https://keyatm.github.io/keyATM/articles/pkgdown_files/keyATM_dynamic.html">keyATM Documentation</a>
+- <a href="https://towardsdatascience.com/why-to-use-seeded-topic-models-in-your-next-project-and-how-to-implement-them-in-r-8502d15d6e8d">Seeded Topic Models</a></p>
+<h3 id="2-libraries">2. Libraries</h3>
+<p>Load the necessary R libraries:</p>
+<ul>
+<li><strong><code>keyATM</code></strong> for dynamic topic modeling.</li>
+<li><strong><code>parallel</code></strong> for parallel processing.</li>
+<li><strong><code>quanteda</code></strong> for text analysis.</li>
+<li><strong><code>tidyverse</code></strong> for data manipulation.</li>
+<li><strong><code>future</code></strong> for handling parallel computing.</li>
+</ul>
+<h3 id="3-data">3. Data</h3>
+<p>Prepare the text data:</p>
+<ul>
+<li>Load the cleaned text data from <code>semi_supervised_topic_modleing.R</code>.</li>
+<li>Filter out empty texts and focus on the time period between 1750 and 1825.</li>
+</ul>
+<h3 id="4-create-keyatm-docs">4. Create keyATM Docs</h3>
+<p>Transform data into a format suitable for the <code>keyATM</code> model:</p>
+<ul>
+<li>Convert the text data into a <code>keyATM</code>-readable format.</li>
+<li>Save the transformed documents for later use.</li>
+</ul>
+<h3 id="5-keywords">5. Keywords</h3>
+<p>Define and visualize keywords:</p>
+<ul>
+<li>Load keyword definitions from an external script.</li>
+<li>Process keywords for analysis, including tokenization and lemmatization.</li>
+<li>Visualize the frequency of keywords by topic and save the results.</li>
+</ul>
+<h3 id="6-create-decade-time-index-variable">6. Create Decade Time Index Variable</h3>
+<p>Generate a time index variable:</p>
+<ul>
+<li>Create a period variable that represents 10-year intervals starting from 1720.</li>
+</ul>
+<h3 id="7-dynamic-keyatm">7. Dynamic keyATM</h3>
+<p>Fit the dynamic keyATM model:</p>
+<ul>
+<li>Set up parallel processing.</li>
+<li>Initialize and fit the dynamic keyATM model with specified settings.</li>
+<li>Save the model and its output for future reference.</li>
+</ul>
+<h3 id="8-model-evaluation">8. Model Evaluation</h3>
+<p>Evaluate the fitted model:</p>
+<ul>
+<li>Inspect topic-term associations.</li>
+<li>Diagnose model performance through log-likelihood and perplexity trends.</li>
+<li>Visualize topic proportions and keyword importance over time.</li>
+</ul>
+<h3 id="9-theta-document-topic-distribution">9. Theta (Document-Topic Distribution)</h3>
+<p>Analyze the document-topic distribution:</p>
+<ul>
+<li>Preprocess and format the theta matrix for plotting.</li>
+<li>Create and save plots showing topic distributions over time and their historical context.</li>
+</ul>
+<h2 id="conclusion">Conclusion</h2>
+<p>This workflow provides a structured approach to dynamic topic analysis, focusing on how topics evolve over time using the <code>keyATM</code> package. By following these steps, users can gain insights into topic trends, visualize changes, and evaluate the effectiveness of the topic modeling approach.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../TOPICANALYSIS/" class="btn btn-neutral float-left" title="Semi-supervised topic modeling"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../SENTIMENT/" class="btn btn-neutral float-right" title="Sentiment analysis">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/h-gear/revolution" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../TOPICANALYSIS/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../SENTIMENT/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

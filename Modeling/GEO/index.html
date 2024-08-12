@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://revolution.readthedocs.io/Modeling/GEO/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Geo-spatial model - American revolution</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Geo-spatial model";
+        var mkdocs_page_input_path = "Modeling\\GEO.md";
+        var mkdocs_page_url = "/Modeling/GEO/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> American revolution
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution">Source code</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution/issues">Issues</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Background of the project</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/BACKGROUND/">Hgear</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/METHODS/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/DATA/">Data</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Started/INSTALLATION/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Data preparation and EDA</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/COLLECTION/">Scraping Letters of Delegates to Congress</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/FFCOLLECTION/">Scraping Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/PREPARATION_DEL/">Data preparation Delegates of Congres</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/PREPARATION_FF/">Data preparation Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/EXPLORE/">Exploratory analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Analyses/WORD2VEC/">Word2Vec models</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Modeling</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../TOPICANALYSIS/">Semi-supervised topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../DYNTOPICANALYSIS/">Dynamic topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../SENTIMENT/">Sentiment analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../NETWORK/">Network modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../MODELING/">Time-respecting path-based network analysis</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Geo-spatial model</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#workflow">Workflow</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-setup-and-libraries">1. Setup and Libraries</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-data-preparation">2. Data Preparation</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#load-datasets">Load Datasets</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#address-combination">Address Combination</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-geocoding">3. Geocoding</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#obtain-coordinates">Obtain Coordinates</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#update-coordinates">Update Coordinates</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#filter-valid-coordinates">Filter Valid Coordinates</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#convert-to-spatial-objects">Convert to Spatial Objects</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#summarize-data">Summarize Data</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#4-visualization">4. Visualization</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#interactive-world-map">Interactive World Map</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#us-state-level-visualization">US State-Level Visualization</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#spatial-clustering">Spatial Clustering</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#cluster-visualization">Cluster Visualization</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#conclusion">Conclusion</a>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developers</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT/">Code of Conduct</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING/">Contributing guidelines</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CITE/">How to Cite</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CONTACT/">Contact information</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/ACTION/">In action</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">American revolution</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Modeling</li>
+      <li class="breadcrumb-item active">Geo-spatial model</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/h-gear/revolution/edit/master/docs/Modeling/GEO.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="geospatial-distribution-of-letters">Geospatial distribution of letters</h1>
+<h2 id="overview">Overview</h2>
+<p>This document outlines the workflow for mapping the geospatial distribution of letters from the Founders Online and ecco datasets. The aim is to visualize and analyze the geographic locations of letters, providing insights into their distribution across different regions.</p>
+<p>It is based on the retrieval of the place where the letter was written and its geographical
+coordinates. This geodata allows to find central hubs of writings. Also, with this information we can make subgroups of letters based on geographical location, and examine whether there are different ideas mentioned in the letters. For example, we can
+compare the letters written in the US with those in Europe, or those written
+in the same city but in different years.</p>
+<p>There are a lot of cities with the same name in different states or/ and in different countries. If the place of writing is missing in the letter or cannot be clearly specified, we tried to extract the place of writing from other letters written by the same person within a specified time frame (30 days) to obtain the most likely place of writing.</p>
+<h2 id="workflow">Workflow</h2>
+<h3 id="1-setup-and-libraries">1. Setup and Libraries</h3>
+<p>Begin by loading the necessary libraries:</p>
+<ul>
+<li><strong><code>tidyverse</code></strong>: For data manipulation and visualization.</li>
+<li><strong><code>sf</code></strong>: For handling spatial data and converting data frames into spatial objects.</li>
+<li><strong><code>tidygeocoder</code></strong>: For geocoding addresses to obtain latitude and longitude.</li>
+<li><strong><code>mapview</code></strong>: For interactive visualization of spatial data.</li>
+<li><strong><code>tigris</code></strong>: For accessing US shapefiles to map geographic regions.</li>
+</ul>
+<h3 id="2-data-preparation">2. Data Preparation</h3>
+<h4 id="load-datasets">Load Datasets</h4>
+<ul>
+<li>Import the <code>founders</code> dataset, which contains coordinates of letters.</li>
+<li>Import the <code>ecco</code> dataset, adjusting column names to match expectations.</li>
+</ul>
+<h4 id="address-combination">Address Combination</h4>
+<ul>
+<li>For both datasets, create a combined address string that includes city, state, and country. This combined address helps in accurate geocoding by incorporating as much location detail as possible.</li>
+</ul>
+<h3 id="3-geocoding">3. Geocoding</h3>
+<h4 id="obtain-coordinates">Obtain Coordinates</h4>
+<ul>
+<li>Use the <code>tidygeocoder</code> package to geocode the combined addresses. This process converts addresses into geographic coordinates (latitude and longitude).</li>
+</ul>
+<h4 id="update-coordinates">Update Coordinates</h4>
+<ul>
+<li>If geocoding fails to provide coordinates, retain existing coordinates from the dataset where available. Ensure no information is lost during this process.</li>
+</ul>
+<h4 id="filter-valid-coordinates">Filter Valid Coordinates</h4>
+<ul>
+<li>Remove entries with missing latitude or longitude to ensure only valid geographic points are used for analysis.</li>
+</ul>
+<h4 id="convert-to-spatial-objects">Convert to Spatial Objects</h4>
+<ul>
+<li>Convert the filtered data into <code>sf</code> objects, which represent spatial features with coordinates in a specified coordinate reference system (CRS).</li>
+</ul>
+<h4 id="summarize-data">Summarize Data</h4>
+<ul>
+<li>Group the data by city and count the number of letters per city. This step helps in understanding the distribution and density of letters in different locations.</li>
+</ul>
+<h3 id="4-visualization">4. Visualization</h3>
+<h4 id="interactive-world-map">Interactive World Map</h4>
+<ul>
+<li>Use the <code>mapview</code> package to create an interactive map showing the distribution of letters for both datasets. Different colors are used to distinguish between datasets.</li>
+</ul>
+<h4 id="us-state-level-visualization">US State-Level Visualization</h4>
+<ul>
+<li>Obtain US state shapefiles using <code>tigris</code> and join these with the letter data to visualize the number of letters by state. This visualization helps in understanding regional patterns within the US.</li>
+</ul>
+<h4 id="spatial-clustering">Spatial Clustering</h4>
+<ul>
+<li>Apply K-means clustering to categorize the geographic points into clusters. This helps in identifying distinct geographic regions where letters are concentrated.</li>
+</ul>
+<h4 id="cluster-visualization">Cluster Visualization</h4>
+<ul>
+<li>Visualize the clusters on a map to analyze the spatial distribution of letters across different clusters.</li>
+</ul>
+<h2 id="conclusion">Conclusion</h2>
+<p>This workflow effectively combines data preparation, geocoding, and visualization techniques to map the distribution of letters across geographic locations. By following this process, you can gain insights into the spatial patterns and concentration of letters, which can inform further analysis and research. The use of interactive maps and spatial clustering enhances the understanding of geographic distributions and reveals underlying patterns within the datasets.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../MODELING/" class="btn btn-neutral float-left" title="Time-respecting path-based network analysis"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../CODE_OF_CONDUCT/" class="btn btn-neutral float-right" title="Code of Conduct">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/h-gear/revolution" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../MODELING/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../CODE_OF_CONDUCT/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

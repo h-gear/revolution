@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://revolution.readthedocs.io/Analyses/PREPARATION_DEL/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Data preparation Delegates of Congres - American revolution</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Data preparation Delegates of Congres";
+        var mkdocs_page_input_path = "Analyses\\PREPARATION_DEL.md";
+        var mkdocs_page_url = "/Analyses/PREPARATION_DEL/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> American revolution
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution">Source code</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="https://github.com/h-gear/revolution/issues">Issues</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Background of the project</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/BACKGROUND/">Hgear</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/METHODS/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/DATA/">Data</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Started/INSTALLATION/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Data preparation and EDA</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../COLLECTION/">Scraping Letters of Delegates to Congress</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../FFCOLLECTION/">Scraping Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Data preparation Delegates of Congres</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#0-goal">0. GOAL</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#1-load-in-libraries">1. LOAD IN LIBRARIES</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#2-data-preprocessing">2. DATA PREPROCESSING</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#a-volume-and-year-variables">A) Volume and Year Variables</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#b-improve-information-on-year">B) Improve Information on Year</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#c-title-from-and-to-variables">C) Title, From, and To Variables</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#d-letter-contents-variable">D) Letter Contents Variable</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#e-date-variable">E) Date Variable</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#3-saving-preprocessed-data">3. SAVING PREPROCESSED DATA</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#a1-all-data-in-csv-file">A1) All Data in CSV File</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#a2-all-data-in-rds-file">A2) All Data in RDS File</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#b-for-making-word2vec-models-shico">B) For Making Word2Vec Models (SHICO)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#c-letters-as-separate-text-files">C) Letters as Separate Text Files</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#d-letters-per-year">D) Letters Per Year</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../PREPARATION_FF/">Data preparation Founding Fathers</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../EXPLORE/">Exploratory analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../WORD2VEC/">Word2Vec models</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Modeling</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/INTRODUCTION/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/TOPICANALYSIS/">Semi-supervised topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/DYNTOPICANALYSIS/">Dynamic topic modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/SENTIMENT/">Sentiment analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/NETWORK/">Network modeling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/MODELING/">Time-respecting path-based network analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Modeling/GEO/">Geo-spatial model</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developers</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT/">Code of Conduct</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING/">Contributing guidelines</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CITE/">How to Cite</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CONTACT/">Contact information</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/ACTION/">In action</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">American revolution</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Data preparation and EDA</li>
+      <li class="breadcrumb-item active">Data preparation Delegates of Congres</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/h-gear/revolution/edit/master/docs/Analyses/PREPARATION_DEL.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="preprocessing-raw-data-on-letters-of-delegates-to-congress">Preprocessing raw data on Letters of Delegates to Congress</h1>
+<h2 id="0-goal">0. GOAL</h2>
+<p>The script aims to preprocess raw data on Letters of Delegates to Congress (1774-1789) for future temporal network and SHICO analysis.</p>
+<h2 id="1-load-in-libraries">1. LOAD IN LIBRARIES</h2>
+<pre><code class="language-r">library(tidyverse) # For data wrangling
+library(polyglotr) # For text translation and manipulation
+</code></pre>
+<h2 id="2-data-preprocessing">2. DATA PREPROCESSING</h2>
+<h3 id="a-volume-and-year-variables">A) Volume and Year Variables</h3>
+<p><strong>Objective:</strong> Extract and clean the volume number, period, and year from the dataset.</p>
+<p><strong>Steps:</strong>
+1. Split the text column to separate Volume and Content.
+2. Extract volume number and period from the Volume column.
+3. Extract the year from the Content column.
+4. Handle cases where the title is not present and clean it.</p>
+<h3 id="b-improve-information-on-year">B) Improve Information on Year</h3>
+<p><strong>Objective:</strong> Correct and fill in missing or incorrect year information.</p>
+<p><strong>Steps:</strong>
+1. Define a function to extract year indices from text.
+2. Loop through each row to verify and update the Year column based on extracted year indices.</p>
+<h3 id="c-title-from-and-to-variables">C) Title, From, and To Variables</h3>
+<p><strong>Objective:</strong> Clean and standardize title, sender, and recipient information.</p>
+<p><strong>Steps:</strong>
+1. Use predefined separators to handle titles without proper delimiters.
+2. Clean the title by removing specific words, symbols, and correcting anomalies.
+3. Separate titles into From and To columns based on the presence of " to ".
+4. Remove or update unknown sender or recipient information.</p>
+<h3 id="d-letter-contents-variable">D) Letter Contents Variable</h3>
+<p><strong>Objective:</strong> Clean and format the content of letters.</p>
+<p><strong>Steps:</strong>
+1. Remove editor notes and special characters.
+2. Use a function to display letters with author and recipient details.
+3. Clean Content2 by removing unwanted text and special characters.</p>
+<h3 id="e-date-variable">E) Date Variable</h3>
+<p><strong>Objective:</strong> Extract and standardize date information from letter content.</p>
+<p><strong>Steps:</strong>
+1. Define a function to clean and process date information.
+2. Standardize date formats and handle manual corrections for specific IDs.
+3. Convert the cleaned dates to Date format and filter data based on the specified date range.</p>
+<h2 id="3-saving-preprocessed-data">3. SAVING PREPROCESSED DATA</h2>
+<h3 id="a1-all-data-in-csv-file">A1) All Data in CSV File</h3>
+<p><strong>Objective:</strong> Save the preprocessed dataset to a CSV file.</p>
+<p><strong>Steps:</strong>
+1. Select relevant columns and rename them.
+2. Convert column names to lowercase and write the data to a CSV file.</p>
+<h3 id="a2-all-data-in-rds-file">A2) All Data in RDS File</h3>
+<p><strong>Objective:</strong> Save the preprocessed dataset to an RDS file.</p>
+<p><strong>Steps:</strong>
+1. Save the data to an RDS file for further use.</p>
+<h3 id="b-for-making-word2vec-models-shico">B) For Making Word2Vec Models (SHICO)</h3>
+<p><strong>Objective:</strong> Prepare a dataset for Word2Vec model building.</p>
+<p><strong>Steps:</strong>
+1. Select relevant columns and save them to a CSV file.</p>
+<h3 id="c-letters-as-separate-text-files">C) Letters as Separate Text Files</h3>
+<p><strong>Objective:</strong> Save each letter as a separate text file for further processing.</p>
+<p><strong>Steps:</strong>
+1. Loop through volume numbers, read RDS files, clean text, and save each letter as a text file in a corresponding folder.</p>
+<h3 id="d-letters-per-year">D) Letters Per Year</h3>
+<p><strong>Objective:</strong> Split data by year and save to CSV files.</p>
+<p><strong>Steps:</strong>
+1. Define a time period and filter data by year (commented out in the script).</p>
+<p><strong>Note:</strong> Standard cleaning of letter texts for Word2Vec models is performed in a separate Python script (<code>make_word2vec_models_for_delegates.py</code>), found in <code>w2v_models/delegates</code>. This script preprocesses the data to develop Word2Vec models for SHICO analysis.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../FFCOLLECTION/" class="btn btn-neutral float-left" title="Scraping Founding Fathers"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../PREPARATION_FF/" class="btn btn-neutral float-right" title="Data preparation Founding Fathers">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/h-gear/revolution" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../FFCOLLECTION/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../PREPARATION_FF/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
