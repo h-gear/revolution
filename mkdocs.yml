@@ -12,16 +12,23 @@ nav:
     - Methods: Background/METHODS.md
     - Data: Background/DATA.md
   - Getting Started:
-    - Installation: Started/INSTALLATION.md
-    - Usage: Started/USAGE.md
-    - Tutorials: Started/TUTORIALS.md    
-  - Analyses:
+    - Installation: Started/INSTALLATION.md    
+  - Data preparation and EDA:
     - Introduction: Analyses/INTRODUCTION.md
-    - Data collection: Analyses/COLLECTION.md
-    - Data preparation: Analyses/PREPARATION.md
+    - Scraping Letters of Delegates to Congress: Analyses/COLLECTION.md
+    - Scraping Founding Fathers: Analyses/FFCOLLECTION.md
+    - Data preparation Delegates of Congres: Analyses/PREPARATION_DEL.md
+    - Data preparation Founding Fathers: Analyses/PREPARATION_FF.md
     - Exploratory analysis: Analyses/EXPLORE.md
-    - Modeling: Analyses/MODELING.md
-    - Geo spatial: Analyses/GEO.md
+    - Word2Vec models: Analyses/WORD2VEC.md 
+  - Modeling:
+    - Introduction: Modeling/INTRODUCTION.md
+    - Semi-supervised topic modeling: Modeling/TOPICANALYSIS.md
+    - Dynamic topic modeling: Modeling/DYNTOPICANALYSIS.md
+    - Sentiment analysis: Modeling/SENTIMENT.md
+    - Network modeling: Modeling/NETWORK.md
+    - Time-respecting path-based network analysis: Modeling/MODELING.md
+    - Geo-spatial model: Modeling/GEO.md
   - Developers:
     - Code of Conduct: CODE_OF_CONDUCT.md    
     - Contributing guidelines: CONTRIBUTING.md    

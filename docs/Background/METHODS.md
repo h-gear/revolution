@@ -1,4 +1,4 @@
-# Methods
+# Key methods
 
 
 ## 1. Shifting concepts in time (shico)

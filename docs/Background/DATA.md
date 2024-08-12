@@ -1,8 +1,8 @@
-# The Data
+# The data
 
 This project is centered on four datasets:
 
-## Founders Online
+## Founders online
 This project examined the entire corpus of 185.000 documents in the US National Archives’ Founders Online database. This database brings together the bulk of the edited and collected papers of seven so-called Founding Fathers from existing print editions as well as from additional online-only sources; a total of 294 print volumes. 
 
 The archive is a rich digital collection of primary source documents
