@@ -1,6 +1,6 @@
 # Historiographing the Era of the American Revolution
 
-![Rev](../logo.jpg)
+![Rev](logo.jpg)
 
 The notions on the historical meaning of *democracy*, *liberty* and *freedom* and its development through time is important to our understanding of the past. Correspondingly, the goal of the HGEAR (acronym for Historiographing the Era of the American Revolution) project is to chart shifts in the character and structure of political discourse during the era of the American Revolution. By comparing shifts in language usage via [**ShiCo**](https://github.com/h-gear/ShiCo/) *(Shifting Concepts Through Time*) with changing formations in correspondence networks, we are able to measure how networks of communication within the [**Founders Online**](https://founders.archives.gov/) letter corpus and resources such as the [**Letters of Delegates to Congress**](https://memory.loc.gov/ammem/amlaw/lwdg.html) shaped the character, distribution, and spread of political ideas during the Revolutionary era. 
 
