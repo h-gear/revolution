@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://revolution.readthedocs.io/Analyses/FFCOLLECTION/" />
       <link rel="shortcut icon" href="../../img/favicon.ico" />
-    <title>Scraping Founding Fathers - American revolution</title>
+    <title>Scraping Founding Fathers - Historiographing the Era of the American Revolution</title>
     <link rel="stylesheet" href="../../css/theme.css" />
     <link rel="stylesheet" href="../../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -31,7 +31,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href="../.." class="icon icon-home"> American revolution
+          <a href="../.." class="icon icon-home"> Historiographing the Era of the American Revolution
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -55,6 +55,8 @@
               <p class="caption"><span class="caption-text">Background of the project</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../../Background/BACKGROUND/">Hgear</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../Background/QUESTIONS/">Research questions</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../../Background/METHODS/">Methods</a>
                   </li>
@@ -132,14 +134,14 @@
               </ul>
               <p class="caption"><span class="caption-text">Developers</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT/">Code of Conduct</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT/">Code of conduct</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING/">Contributing guidelines</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">About</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../../About/CITE/">How to Cite</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CITE/">How to cite</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../../About/CONTACT/">Contact information</a>
                   </li>
@@ -153,7 +155,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../..">American revolution</a>
+          <a href="../..">Historiographing the Era of the American Revolution</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -171,11 +173,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="founding-fathers-letters-data-scraping">Founding Fathers Letters: Data scraping</h1>
-<p>This documentation outlines the process for scraping, cleaning, and saving data from the "Founding Fathers" website, available at <a href="https://founders.archives.gov/">https://founders.archives.gov/</a>. This dataset is utilized for historical research and analysis. The modified code provided by Jay Timm, which can be found <a href="https://github.com/jaytimm/founders-online-corpus">here</a>, has been adapted for this purpose.</p>
+                <h1 id="scraping-letters-of-the-founding-fathers">Scraping letters of the Founding Fathers</h1>
 <h2 id="overview">Overview</h2>
 <h3 id="objective">Objective</h3>
-<p>The goal is to scrape and save text data from the "Founding Fathers" website, extracting metadata and content from XML and JSON sources. The data will be cleaned and organized into a structured format suitable for further analysis.</p>
+<p>The goal is to scrape and save text data from the <a href="https://founders.archives.gov/">Founding Fathers</a> website, extracting metadata and content from XML and JSON sources. The data will be cleaned and organized into a structured format suitable for further analysis. The original code is provided by Jay Timm which can be found <a href="https://github.com/jaytimm/founders-online-corpus">here</a>. It has been adapted for the curent project.</p>
 <h3 id="workflow">Workflow</h3>
 <ol>
 <li><strong>Load Required Libraries</strong>: Import the necessary R packages for data manipulation and scraping.</li>

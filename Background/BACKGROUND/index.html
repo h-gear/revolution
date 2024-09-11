@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://revolution.readthedocs.io/Background/BACKGROUND/" />
       <link rel="shortcut icon" href="../../img/favicon.ico" />
-    <title>Hgear - American revolution</title>
+    <title>Hgear - Historiographing the Era of the American Revolution</title>
     <link rel="stylesheet" href="../../css/theme.css" />
     <link rel="stylesheet" href="../../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -31,7 +31,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href="../.." class="icon icon-home"> American revolution
+          <a href="../.." class="icon icon-home"> Historiographing the Era of the American Revolution
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -57,6 +57,8 @@
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Hgear</a>
     <ul class="current">
     </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../QUESTIONS/">Research questions</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../METHODS/">Methods</a>
                   </li>
@@ -104,14 +106,14 @@
               </ul>
               <p class="caption"><span class="caption-text">Developers</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT/">Code of Conduct</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT/">Code of conduct</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING/">Contributing guidelines</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">About</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../../About/CITE/">How to Cite</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../../About/CITE/">How to cite</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../../About/CONTACT/">Contact information</a>
                   </li>
@@ -125,7 +127,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../..">American revolution</a>
+          <a href="../..">Historiographing the Era of the American Revolution</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -144,25 +146,17 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="the-h-gear-project">The H-GEAR project</h1>
-<p>The H-GEAR project is unraveling the intellectual tapestry of America's founders by using digital methods to chart shifts in the character and structure of political discourse during the American Revolution. The project is centered on a large database of time-stamped letters that were exchanged between seven so-called “founding fathers” and other key figures of that time. The ambition of the project is to understand how political discourse shifted during the Revolutionary era in the United States, to reveal which people had influence and power, and to discover where and how these changes spread.  </p>
-<p>1) The first phase of the project involves content-based analysis with <strong>word2vec-based Shico software</strong>. We aim to trace how liberal and republican concepts and ideologies shifted in the period between 1725-1835, uncovering the subtle nuances in language usage that shaped political discourse. Given a small set of user-provided keywords (e.g., freedom, liberty, right), ShiCo gives insight into changes in the vocabulary used to denote the concept by examining the semantic relations between words in different years.  </p>
-<p>2) The second phase employs the combination of <strong>semi-supervised topic modeling</strong> with <em>seededLDA</em> and <strong>temporal social network analysis</strong> with <em>pathpy</em> to establish links between the writers through time. Through the analysis of letters exchanged, the project seeks to identify the most influential figures and map the network that propagated these political ideologies.  </p>
-<p>Fndings underline that <strong>Thomas Jefferson</strong> emerges as the central figure of this period – not surprising given his leading role in drafting the Declaration of Independence. However, as is common to historical network analyses, because the corpus of letters is biased with its focus on the founding fathers, the researchers acknowledge that the results are equally biased.  </p>
-<p>With anticipation of the 250th anniversary of the Declaration of Independence in 2026, we believe interest in the American Revolution will garner even more attention.</p>
+<p>The H-GEAR project is unraveling the intellectual tapestry of America's founders by using digital methods to chart shifts in the character and structure of political discourse during the American Revolution. The project is centered on a large database of time-stamped letters that were exchanged between seven so-called “founding fathers” and other key figures of that time. The ambition of the project is to understand how political discourse changed during the Revolutionary era in the United States, to reveal which people had influence and power, and to discover where and how these changes spread.  </p>
+<p>1) The first phase of the project involves <strong>content-based analysis</strong> of the letter correspondences. Specifically, we aim to trace how liberal and republican concepts and ideologies shifted in the period between 1725-1835, uncovering the subtle nuances in language usage that shaped political discourse. Given a small set of user-provided keywords (e.g., freedom, liberty, right), ShiCo software gives insight into changes in the vocabulary used to denote these concepts by examining the semantic relations between words in different years.  </p>
+<p>2) The second phase employs the combination of <strong>semi-supervised topic modeling</strong> and <strong>temporal social network analysis</strong> to establish links between the writers through time. Through the analysis of exchanged letters, the project seeks to identify the most influential figures and map the network that propagated these political ideologies.  </p>
+<p>Findings underline that <strong>Thomas Jefferson</strong> emerges as the central figure of this period – not surprising given his leading role in drafting the Declaration of Independence. However, as is common to historical network analyses, because the corpus of letters is biased with its focus on the founding fathers, the researchers acknowledge that the results are equally biased. We nonetheless believe that, given the upcoming 250th anniversary of the Declaration of Independence in 2026, this project contributes to even more attention to the American Revolution.</p>
 <p><br></p>
-<h1 id="research-questions">Research questions</h1>
-<ul>
-<li>How did the political discourse centered around the two concepts of <strong>liberal</strong> and <strong>republican</strong> ideologies develop during the Revolutionary era?</li>
-<li>Who initiated and drove the spread of these ideas on political ideology?</li>
-<li>How did these ideas on political ideologies spread accross the network of interconnected people?</li>
-<li>Can we identify specific moments in time and places where these shifts are particularly prominent?</li>
-</ul>
               
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
         <a href="../.." class="btn btn-neutral float-left" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../METHODS/" class="btn btn-neutral float-right" title="Methods">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../QUESTIONS/" class="btn btn-neutral float-right" title="Research questions">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -192,7 +186,7 @@
       <span><a href="../.." style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../METHODS/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../QUESTIONS/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>
