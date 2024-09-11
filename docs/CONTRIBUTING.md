@@ -1,7 +1,6 @@
 # Contributing Guidelines
 
-Thank you for considering contributing to our project! We appreciate any form of contribution, from asking questions to submitting bug reports or proposing new features. 
-Please review our [Code of Conduct](#url-to-code-of-conduct) before engaging with the project.
+Thank you for considering contributing to our project! We appreciate any form of contribution, from asking questions to submitting bug reports or proposing new features. Please review our Code of Conduct before engaging with the project.
 
 ## Types of Contributions
 
@@ -16,14 +15,16 @@ Please review our [Code of Conduct](#url-to-code-of-conduct) before engaging wit
 - Apply relevant labels to the newly created issue.
 
 ### 3. Making Code Changes
+
 **(Important)** Before making changes, announce your plan through a new issue.
+
 1. Wait for community consensus on the proposed idea.
 2. Fork the repository and create a feature branch.
 3. Stay updated with the main branch by pulling changes.
-4. Install dependencies (refer to [development documentation](#url-to-develop-docs)).
+4. Install dependencies.
 5. Add new tests if necessary and update/expand documentation.
 6. Push your feature branch to your fork.
-7. Create a pull request following [these instructions](#url-to-instructions).
+7. Create a pull request.
 
 If you feel you've made a valuable contribution but need help with tests or documentation, submit the pull request, and we'll assist you.
 

@@ -1,4 +1,4 @@
-site_name: American revolution
+site_name: Historiographing the Era of the American Revolution
 site_url: https://revolution.readthedocs.io
 repo_url: https://github.com/h-gear/revolution
 repo_name: GitHub
@@ -9,6 +9,7 @@ nav:
   - Issues: https://github.com/h-gear/revolution/issues  
   - Background of the project:
     - Hgear: Background/BACKGROUND.md
+    - Research questions: Background/QUESTIONS.md
     - Methods: Background/METHODS.md
     - Data: Background/DATA.md
   - Getting Started:
@@ -30,10 +31,10 @@ nav:
     - Time-respecting path-based network analysis: Modeling/MODELING.md
     - Geo-spatial model: Modeling/GEO.md
   - Developers:
-    - Code of Conduct: CODE_OF_CONDUCT.md    
+    - Code of conduct: CODE_OF_CONDUCT.md    
     - Contributing guidelines: CONTRIBUTING.md    
   - About:
-    - How to Cite: About/CITE.md
+    - How to cite: About/CITE.md
     - Contact information: About/CONTACT.md
     - In action: About/ACTION.md    
      

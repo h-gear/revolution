@@ -1,12 +1,11 @@
-# Founding Fathers Letters: Data scraping
-
-This documentation outlines the process for scraping, cleaning, and saving data from the "Founding Fathers" website, available at [https://founders.archives.gov/](https://founders.archives.gov/). This dataset is utilized for historical research and analysis. The modified code provided by Jay Timm, which can be found [here](https://github.com/jaytimm/founders-online-corpus), has been adapted for this purpose.
+# Scraping letters of the Founding Fathers
 
 ## Overview
 
 ### Objective
 
-The goal is to scrape and save text data from the "Founding Fathers" website, extracting metadata and content from XML and JSON sources. The data will be cleaned and organized into a structured format suitable for further analysis.
+The goal is to scrape and save text data from the [Founding Fathers](https://founders.archives.gov/) website, extracting metadata and content from XML and JSON sources. The data will be cleaned and organized into a structured format suitable for further analysis. The original code is provided by Jay Timm which can be found [here](https://github.com/jaytimm/founders-online-corpus). It has been adapted for the curent project.
+
 
 ### Workflow
 

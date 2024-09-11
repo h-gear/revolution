@@ -17,7 +17,6 @@ For general questions and information, you can reach the Principal Investigator 
 For technical support and troubleshooting, please contact our Lead Research Software Engineer Thijs Vroegh:
 
 - **Email**: [t.vroegh@esciencecenter.nl](mailto:t.vroegh@esciencecenter.nl)
-- **Documentation**: [https://revolution.readthedocs.io/en/latest/](https://revolution.readthedocs.io/en/latest/)
 
 **Collaboration**
 

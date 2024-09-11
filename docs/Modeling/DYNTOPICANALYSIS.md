@@ -12,10 +12,12 @@ This document describes the process for performing dynamic topic analysis on the
 This script performs a dynamic topic analysis on the Founders Online texts, analyzing how the prevalence of topics changes over time. It uses the `keyATM` package to fit a dynamic keyATM model to the cleaned text data.
 
 **Purpose:**
+
 - Understand the evolution of topics over time.
 - Provide an alternative to the shifting concepts in time (shico) approach.
 
 **References:**
+
 - [keyATM Documentation](https://keyatm.github.io/keyATM/articles/pkgdown_files/keyATM_dynamic.html)
 - [Seeded Topic Models](https://towardsdatascience.com/why-to-use-seeded-topic-models-in-your-next-project-and-how-to-implement-them-in-r-8502d15d6e8d)
 

@@ -1,6 +1,4 @@
-# Letters of Delegates to Congress: Data scraping
-
-This documentation outlines the process of scraping, cleaning, and storing data from the "Letters of Delegates to Congress (1774-1789)". The goal is to extract all relevant text data for further analysis, such as temporal network analysis and SHiCo analysis.
+# Scraping letters of Delegates to Congress
 
 ## Overview
 
