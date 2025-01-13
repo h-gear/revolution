@@ -96,8 +96,14 @@ target/
 # Jupyter NB Checkpoints
 .ipynb_checkpoints/
 
-# exclude data from source control by default
+# Ignore the entire data directory
 /data/
+
+# Allow specific directories and file
+!data/
+!data/processed/
+!data/processed/founders/
+!data/processed/founders/founders_online_coordinates_all.csv
 
 # exclude files in examples folder
 /examples/

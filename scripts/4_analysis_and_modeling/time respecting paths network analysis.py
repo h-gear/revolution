@@ -70,9 +70,9 @@ ideology = "_" + "republican"
 
 # If 1) SHICO ---- 
 # Run the following analysis separatedly on either 'links_liberal' or 'links_republican'
-file_path = path_to_data + 'links{}.csv'.format(ideology)
-links = pd.read_csv(file_path)
-display(links.head())
+#file_path = path_to_data + 'links{}.csv'.format(ideology)
+#links = pd.read_csv(file_path)
+#display(links.head())
 
 # If 2) TOPIC ANALYSIS ----
 file_path = path_to_data + 'letters_with_topic_info.csv'
@@ -89,6 +89,9 @@ display(links.tail(1)) # the last observation of the subset
 
 links.info()
 
+nr42 = letters[letters['sender_id'] == 1696] 
+len(nr42)
+
 # amount of letters
 len(links.index)  # "01_Liberal politics": ca. 2265
                   # "02_Republican politics": ca. 5781
@@ -97,6 +100,7 @@ len(links.index)  # "01_Liberal politics": ca. 2265
 data = links[['sender_id', 'receiver_id', 'sending_date']]
 data = data[~data['sending_date'].isna()]
 
+data.info()
 # Since pathpy uses unix timestamps which can only work with dates after 1st January 1970,
 # we convert the sending dates of letters into time differences
 def get_time_diff(d):
@@ -225,7 +229,8 @@ for l in paths.paths:
             print('{0} -> {1}'.format(p, paths.paths[l][p][1]))
 
 # As an example, look to a group of paths with a specific length
-paths.paths[8]
+type(paths.paths[11])
+paths.paths[7]
 
 # create a network of paths
 network_graph = pp.Network.from_paths(paths)

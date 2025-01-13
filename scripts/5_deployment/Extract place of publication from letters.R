@@ -26,7 +26,7 @@ require(openNLPdata)
 
 # 2. LOAD PREPROCESSED FO LETTER DATA ----
 letter_ss <- readRDS(file = "data/processed/founders/ffc_preprocessed.rds") %>%
-  as.data.frame() %>%
+  as.data.frame()
 
 # 2. LOAD PREPROCESSED DELEGATES LETTER DATA ----
 #letter_ss <- readRDS(file = "data/processed/delegates/Letters of Delegates.rds") %>%
@@ -1367,4 +1367,4 @@ letter_ss <- letter_ss %>%
   select(-timediff)
 
 # save results
-saveRDS(letter_ss, file = "data/processed/founders/founders_geo_ref.rds")
+saveRDS(letter_ss, file = "data/processed/founders/founders_geo_ref_all.rds")

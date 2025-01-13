@@ -11,11 +11,19 @@ library(tigris) # https://rdrr.io/cran/tigris/man/states.html
 
 # 2. DATA ----
 # read Founders Online data with information on coordinates
-founders <- readRDS(file = "data/processed/founders/founders_geo_ref.rds")
+founders <- readRDS(file = "data/processed/founders/founders_geo_ref_all.rds")
 
 # read ecco data with information on coordinates
 ecco <- readRDS(file = "data/processed/ecco/ecco_geo_ref.rds") %>%
         rename(city = place_of_publication)
+
+thijs <- read.csv("data/processed/founders/path_rows.csv")
+
+thijs <- thijs %>% distinct(sender_id,receiver_id, city3, .keep_all = TRUE)
+
+write.csv(thijs, "data/processed/locations_of_nodes_path11.csv", row.names = FALSE)
+
+
 
 # read evans data with information on coordinates
 #evans <- readRDS(file = "data/processed/evans/evans_geo_ref.rds")
@@ -157,3 +165,10 @@ latlon_founders %>%
         layer.name = "Geospatial segments"
     )
 
+getwd()
+write.csv(latlon_founders, "data/processed/founders_online_coordinates_all.csv", row.names = FALSE)
+
+library(data.table)
+fwrite(latlon_founders, "data/processed/founders_online_coordinates_all.csv")
+
+saveRDS(latlon_founders, file = "data/processed/founders_online_coordinates_all.rds")
