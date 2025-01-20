@@ -124,7 +124,7 @@ The code is written mostly in R and parts in Python. For R , [*RStudio*](https:/
 #### **Setting up the Virtual Environment for R**
 To ensure a consistent and reproducible environment, this project uses the venv package in R. The following will install the renv package, create and activate the virtual environment, and install the required R packages as specified in renv.lock. 
 
-_1 Navigate to the Project Directory:_
+_1 Navigate to the project directory:_
 ```
 cd revolution
 ```
@@ -137,7 +137,7 @@ Open R or RStudio and install renv:
 install.packages("renv")
 ```
 
-_3 Initialize or Load renv:_
+_3 Initialize or load renv:_
 
 In the RStudio console, navigate to the project directory (<repository-directory>) and activate renv:
 
@@ -145,7 +145,7 @@ In the RStudio console, navigate to the project directory (<repository-directory
 renv::activate()
 ```
 
-_4 Restore the Environment:_
+_4 Restore the environment:_
 
 Restore the project environment using the renv.lock file:
 
@@ -157,19 +157,19 @@ This will:
 - Automatically download and install all required packages as specified in the renv.lock file.
 - Use the appropriate versions for compatibility.
 
-_5 Verify Setup:_
+_5 Verify setup:_
 
-After restoration, Check for any missing packages using:
+After restoration, check for any missing packages using:
 
 ```
 renv::status()
 ```
-Test loading some key packages to ensure the environment works as expected
+Test whether the installtion is succesful by loading some key packages to ensure the environment works as expected:
 ```
 library(dplyr)  # Replace with any other package name you just installed
 ```
 
-_6 Run the Project:_
+_6 Run the project:_
 
 Once renv is fully set up, you are ready to run the code within the virtual environment. Execute your R scripts or run your Rmarkdown documents as usual.
 
