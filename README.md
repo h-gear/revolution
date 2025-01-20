@@ -109,14 +109,15 @@ Here's the link to learn more about the [**project's background**](documentation
 ### Prerequisites
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
-To install hgear from this GitHub repository, do:
+To install hgear from this GitHub repository, go to a directory where you want to install your files. From there, go to a command prompt in Windows (e.g., powershell), for example by right-clicking the mouse and select 'Open in terminal'. Next, paste the following after the prompt:
 
 ```console
 git clone git@github.com:h-gear/revolution.git
 ```
+This will download all the files from github
 
 ### Installation
-Here, we give a step by step instructions that tell you how to get you up and running.
+Next, we give a step by step instructions that tell you how to get you up and running.
 The code is written mostly in R and parts in Python. For R , [*RStudio*](https://posit.co/download/rstudio-desktop/) is recommended, while for Python, we recommend [*anaconda*](https://www.anaconda.com/download).
 
 
