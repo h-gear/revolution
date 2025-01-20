@@ -112,7 +112,7 @@ These instructions will get you a copy of the project up and running on your loc
 To install hgear from this GitHub repository, do:
 
 ```console
-git clone git@github.com:https://github.com/h-gear/revolution.git
+git clone git@github.com:h-gear/revolution.git
 ```
 
 ### Installation
@@ -121,30 +121,59 @@ The code is written mostly in R and parts in Python. For R , [*RStudio*](https:/
 
 
 #### **Setting up the Virtual Environment for R**
-To ensure a consistent and reproducible environment, this project uses the venv package in R. Follow these steps to set up the virtual environment and install the necessary packages:
+To ensure a consistent and reproducible environment, this project uses the venv package in R. The following will install the renv package, create and activate the virtual environment, and install the required R packages as specified in renv.lock. 
 
-_Navigate to the Project Directory:_
+_1 Navigate to the Project Directory:_
 ```
 cd revolution
 ```
 
-_Run the Setup Script:_
+_2 Install renv (if not already installed):_
 
-Execute the provided setup script (setup.bat) to automatically create and activate the virtual environment, and install the necessary packages:
+Open R or RStudio and install renv:
+
 ```
-setup.bat
+install.packages("renv")
 ```
-This script will install the renv package, create and activate the virtual environment, and install the required R packages specified in renv.lock. 
 
-By running the provided setup script, Windows users can easily set up the required environment without worrying about manually installing packages. This approach streamlines the process and ensures that users have the correct dependencies in place.
+_3 Initialize or Load renv:_
 
-Note: Ensure that the script is executed with administrative privileges. If prompted, right-click on setup.bat and choose "Run as administrator."
+In the RStudio console, navigate to the project directory (<repository-directory>) and activate renv:
 
-_Run Your Code:_
+```
+renv::activate()
+```
 
-After the setup script completes, you are ready to run the code within the virtual environment. Execute your R scripts or run your Rmarkdown documents as usual.
+_4 Restore the Environment:_
 
-_Deactivate the Virtual Environment:_
+Restore the project environment using the renv.lock file:
+
+```
+renv::restore()
+```
+This will:
+
+- Automatically download and install all required packages as specified in the renv.lock file.
+- Use the appropriate versions for compatibility.
+
+_5 Verify Setup:_
+
+After restoration, Check for any missing packages using:
+
+```
+renv::status()
+```
+Test loading some key packages to ensure the environment works as expected
+```
+library(dplyr)  # Replace with any other package name you just installed
+```
+
+_6 Run the Project:_
+
+Once renv is fully set up, you are ready to run the code within the virtual environment. Execute your R scripts or run your Rmarkdown documents as usual.
+
+
+_7 Deactivate the Virtual Environment:_
 
 When you are done, deactivate the virtual environment:
 ```
